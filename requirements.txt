@@ -1,0 +1,8 @@
+streamlit==1.38.0
+neo4j==5.24.0
+pyvis==0.3.2
+python-dotenv==1.0.1
+bandit==1.8.0
+safety==3.2.0
+gitleaks==8.18.4
+trivy==0.53.0

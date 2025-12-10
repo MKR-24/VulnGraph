@@ -1,0 +1,27 @@
+name: vulngraph
+
+services:
+  neo4j:
+    image: neo4j:5.25-community
+    container_name: vulngraph-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474" #WEB UI
+      - "7687:7687" #BOLT protocol
+    environment:
+      NEO4J_AUTH: "neo4j/vulngraph123"
+      NEO4J_PLUGINS: '["apoc","graph-data-science"]'
+      # auto installs GDS + APOC plugins
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/import
+      - neo4j_plugins:/plugins
+  
+  # Future services will go here (Qdrant, Ollama, etc.)
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:

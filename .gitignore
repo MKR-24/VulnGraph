@@ -1,0 +1,7 @@
+﻿__pycache__/
+*.pyc
+.env
+.venv/
+neo4j_data/
+chroma_db/
+report*.pdf
