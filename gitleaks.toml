@@ -1,0 +1,13 @@
+# gitleaks.toml
+[allowlist]
+paths = [
+  ''':.*\.venv.*''',
+  ''':.*\.git.*''',
+  ''':.*tools.*'''
+]
+
+[[rules]]
+id = "test-api-key"
+description = "Fake test API key"
+regex = '''(?i)(api[_-]?key|token|secret)\s*=\s*["']sk-[a-zA-Z0-9]{20,}["']'''
+tags = ["test"]
