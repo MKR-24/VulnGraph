@@ -10,17 +10,17 @@ GITLEAKS_EXE = TOOLS_DIR / "gitleaks.exe"
 TRIVY_EXE = TOOLS_DIR / "trivy.exe"
 
 def normalize_path(path: str) -> str:
-    """Convert any path (abs/rel, win/unix) to project-relative forward-slash path."""
-    path_str =path_str.replace("\\", "/").strip()
-    base_str= str(BASE_DIR).replace("\\", "/") + "/"
+    "Normalize file paths to use forward slashes for consistency across platforms."
+    path_str = str(path).replace("\\", "/").strip()
+    base_str = str(BASE_DIR).replace("\\", "/") + "/"
     if path_str.startswith(base_str):
         path_str = path_str[len(base_str):]
     path_str = path_str.lstrip("./")
-    return path_str
+    return path_str if path_str else ""
 
-def run_gitleaks(repo_path: str = ".") -> list:
+def run_gitleaks(repo_path: str= ".") -> list:
     if not GITLEAKS_EXE.exists():
-        print("gitleaks.exe not found at:", GITLEAKS_EXE)
+        print("gitleaks.exe not found at", GITLEAKS_EXE)
         return []
     try:
         cmd = [
@@ -31,81 +31,90 @@ def run_gitleaks(repo_path: str = ".") -> list:
             "--no-git",
             "--redact"
         ]
-        print("Running Gitleaks:", " ".join(cmd))  # Debug cmd
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR, timeout=120)
+        print("Running gitleaks with command:", " ".join(cmd))
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 120)
 
-        print(f"Gitleaks exit code: {result.returncode}")
-        if result.returncode not in [0, 1]:
-            print("Gitleaks stderr:", result.stderr.strip())
+        print(f"Gitleaks exited with code : {result.returncode}")
+        if result.returncode not in [0,1]:
+            print("Gitleaks error output:", result.stderr.strip())
             return []
-
         findings = json.loads(result.stdout) if result.stdout.strip() else []
-        print(f"🔍 Gitleaks found {len(findings)} leaks")
+        print(f"Gitleaks found {len(findings)} secrets.")
         return findings
     except Exception as e:
-        print("Gitleaks exception:", str(e))
+        print("Gitleaks execution error:", str(e))
         return []
-    
+
 def run_trivy_fs(path: str = ".") -> list:
     if not TRIVY_EXE.exists():
-        print("trivy.exe not found at:", TRIVY_EXE)
+        print("trivy.exe not found at", TRIVY_EXE)
         return []
     try:
         cmd = [
             str(TRIVY_EXE), "fs",
             "--format", "json",
             "--scanners", "vuln,secret,misconfig",
-            "--quiet",  # less noise
-            str(BASE_DIR / path)
+            "--quiet",
+            str(BASE_DIR)
         ]
-        print("Running Trivy:", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR, timeout=180)
+        print("Running Trivy with command:", " ".join(cmd))
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 180)
 
-        print(f"Trivy exit code: {result.returncode}")
+        print(f"Trivy exited with code : {result.returncode}")
         if result.returncode != 0:
-            print("Trivy stderr:", result.stderr.strip())
-
+            print("Trivy error output:", result.stderr.strip())
+            return []
         data = json.loads(result.stdout) if result.stdout.strip() else {}
         results = data.get("Results", [])
         total_items = sum(
-            len(r.get("Vulnerabilities", [])) + len(r.get("Secrets", []))
-            for r in results
+            len(result.get("Vulnerabilities", [])) +
+            len(result.get("Secrets", [])) +
+            len(result.get("Misconfigurations", []))
+            for result in results
         )
-        print(f"🔍 Trivy processed {len(results)} targets, found ~{total_items} issues")
+        print(f"Trivy processed {len(results)} results with a total of {total_items} findings.")
         return results
     except Exception as e:
-        print("Trivy exception:", str(e))
+        print("Trivy execution error:", str(e))
         return []
-
+    
 def run_bandit(path: str = ".") -> list:
     try:
+        import bandit
+        exclude_dirs = ",".join([
+            str(BASE_DIR / ".venv"),
+            str(BASE_DIR / "__pycache__"),
+            str(BASE_DIR / "node_modules"),
+            str(BASE_DIR / "tools"),
+            str(BASE_DIR / "tmp"),
+        ])
         cmd = [
-            "bandit", "-r",
-            str(BASE_DIR / path),
+            "bandit", "-r", str(BASE_DIR),
             "-f", "json",
             "--quiet",
-            "--recursive",  # explicit, though -r already does it
-            "--exclude", ".venv,__pycache__,tools,tmp,node_modules"
+            "--exclude", exclude_dirs
         ]
-        print("Running Bandit:", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
+        print("Running Bandit with command:", " ".join(cmd))
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 120)
 
-        print(f"Bandit exit code: {result.returncode}")
-        data = json.loads(result.stdout) if result.stdout.strip() else {}
+        print(f"Bandit exited with code : {result.returncode}")
+        data= json.loads(result.stdout) if result.stdout.strip() else {}
         findings = data.get("results", [])
-        print(f"🔍 Bandit found {len(findings)} issues")
+        print(f"Bandit found {len(findings)} issues.")
         return findings
     except Exception as e:
-        print("Bandit exception:", str(e))
+        print("Bandit execution error:", str(e))
         return []
-
+    
 def scan_all() -> Dict[str, List[Dict]]:
-    """Run all scanners."""
-    print(f"🚀 Starting scan from base directory: {BASE_DIR}")
-    findings = {
+    """Run all scanners. Returns dict with keys: gitleaks, trivy, bandit.
+    Empty list per key means either clean scan OR scanner failure — check logs to distinguish."""
+    print(f"Starting comprehensive scan from base directory: {BASE_DIR}")
+    findings={
         "gitleaks": run_gitleaks(),
         "trivy": run_trivy_fs(),
         "bandit": run_bandit()
     }
-    print("✅ Scan finished")
+    total_findings ={k : len(v) for k,v in findings.items()} 
+    print(f"Scan completed with findings: {total_findings}")
     return findings

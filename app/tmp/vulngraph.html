@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 650px;
+                 background-color: #0d1117;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body style='background:#0d1117;margin:0;padding:0;'>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:7", "label": "\ud83d\udcc4 main.py", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 main.py"}, {"color": {"background": "#2a1f0a", "border": "#00ff88", "highlight": {"border": "#00ff88"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:2", "label": "\u26a0\ufe0f B110", "shape": "dot", "size": 20, "title": "\u26a0\ufe0f B110 | LOW | bandit\ntry_except_pass \u2014 Try, Except, Pass detected.\n\n\ud83d\udca1 A try_except block with a pass statement in the except clause."}, {"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:8", "label": "\ud83d\udcc4 scanner.py", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 scanner.py"}, {"color": {"background": "#2a1f0a", "border": "#00ff88", "highlight": {"border": "#00ff88"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:3", "label": "\u26a0\ufe0f B404", "shape": "dot", "size": 20, "title": "\u26a0\ufe0f B404 | LOW | bandit\nblacklist \u2014 Consider possible security implications associated with the subprocess module.\n\n\ud83d\udca1 The vulnerability relates to the misuse of Python\u0027s subprocess module which could lead to command injection."}, {"color": {"background": "#2a1f0a", "border": "#00ff88", "highlight": {"border": "#00ff88"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:4", "label": "\u26a0\ufe0f B603", "shape": "dot", "size": 20, "title": "\u26a0\ufe0f B603 | LOW | bandit\nsubprocess_without_shell_equals_true \u2014 subprocess call - check for execution of untrusted input.\n\n\ud83d\udca1 A subprocess call that does not use shell=True is potentially executing untrusted input."}, {"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:0", "label": "\ud83d\udcc4 vis-network.css", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 lib/vis-9.1.2/vis-network.css"}, {"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:1", "label": "\ud83d\udcc4 vis-network.min.js", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 lib/vis-9.1.2/vis-network.min.js"}, {"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:5", "label": "\ud83d\udcc4 requirements.txt", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 requirements.txt"}, {"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:6", "label": "\ud83d\udcc4 llm.py", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 llm.py"}, {"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:9", "label": "\ud83d\udcc4 utils.js", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 lib/bindings/utils.js"}, {"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:10", "label": "\ud83d\udcc4 tom-select.complete.min.js", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 lib/tom-select/tom-select.complete.min.js"}, {"color": {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}, "font": {"color": "#c9d1d9"}, "id": "4:199e104d-85e5-47b8-9fce-6077364f5732:11", "label": "\ud83d\udcc4 tom-select.css", "shape": "dot", "size": 18, "title": "\ud83d\udcc4 lib/tom-select/tom-select.css"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "#1e3a5f", "from": "4:199e104d-85e5-47b8-9fce-6077364f5732:7", "to": "4:199e104d-85e5-47b8-9fce-6077364f5732:2", "width": 2}, {"arrows": "to", "color": "#1e3a5f", "from": "4:199e104d-85e5-47b8-9fce-6077364f5732:8", "to": "4:199e104d-85e5-47b8-9fce-6077364f5732:3", "width": 2}, {"arrows": "to", "color": "#1e3a5f", "from": "4:199e104d-85e5-47b8-9fce-6077364f5732:8", "to": "4:199e104d-85e5-47b8-9fce-6077364f5732:4", "width": 2}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"edges": {"arrows": {"to": {"enabled": true, "scaleFactor": 1.5}}, "color": {"color": "#1e3a5f", "highlight": "#00ff88"}, "width": 1.8, "smooth": {"enabled": true, "type": "continuous"}}, "nodes": {"font": {"color": "#c9d1d9", "size": 13, "face": "monospace"}, "borderWidth": 2, "shadow": {"enabled": true, "color": "rgba(0,255,136,0.15)", "size": 8}}, "physics": {"enabled": true, "barnesHut": {"gravitationalConstant": -7000, "springLength": 200, "damping": 0.15}}, "interaction": {"hover": true, "tooltipDelay": 100, "hideEdgesOnDrag": true}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
