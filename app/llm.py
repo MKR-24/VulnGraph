@@ -17,6 +17,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
+from rag import retrieve_for_finding,seed_kb,is_seeded
 
 
 load_dotenv()
@@ -28,11 +29,49 @@ NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "vulngraph123")
 
-BATCH_DELAY = 1.0  # seconds between Ollama calls to avoid overload
+BATCH_DELAY = 3.0  # seconds between Ollama calls to avoid overload
 MAX_RETRIES = 2  # max retries for Ollama calls
 
 #Prompt Template
-PROMPTS ={
+PROMPTS = {
+    "v2_vulnerability": """You are a senior application security engineer. Analyze this vulnerability finding using the provided reference context and respond ONLY with a valid JSON object — no preamble, no markdown, no explanation outside the JSON.
+
+Reference context from security knowledge base:
+{context}
+
+Finding details:
+- ID: {id}
+- Severity: {severity}
+- Source scanner: {source}
+- Description: {text}
+
+Use the reference context to give accurate, grounded explanations. Respond with exactly this JSON structure:
+{{
+    "explanation": "1-2 sentence plain English description of what this vulnerability is",
+    "why_dangerous": "1-2 sentence explanation of the real-world risk if exploited",
+    "fix": "Concrete, specific fix — code snippet or step-by-step instruction",
+    "cwe": "CWE-XXX if applicable, else null"
+}}""",
+
+    "v2_secret": """You are a senior application security engineer. Analyze this leaked secret finding using the provided reference context and respond ONLY with a valid JSON object — no preamble, no markdown, no explanation outside the JSON.
+
+Reference context from security knowledge base:
+{context}
+
+Finding details:
+- Rule matched: {rule}
+- Line number: {line}
+- Source scanner: {source}
+
+Use the reference context to give accurate, grounded explanations. Respond with exactly this JSON structure:
+{{
+    "explanation": "1-2 sentence plain English description of what this secret leak means",
+    "why_dangerous": "1-2 sentence explanation of what an attacker could do with this",
+    "fix": "Concrete steps to remediate — rotate key, remove from code, use env vars etc.",
+    "cwe": "CWE-798 or similar if applicable, else null"
+}}""",
+
+    # Keep v1 as fallback if RAG is unavailable
     "v1_vulnerability": """You are a senior application security engineer. Analyze this vulnerability finding and respond ONLY with a valid JSON object — no preamble, no markdown, no explanation outside the JSON.
 
 Finding details:
@@ -43,10 +82,10 @@ Finding details:
 
 Respond with exactly this JSON structure:
 {{
-"explanation": "1-2 sentence plain English description of what this vulnerability is",
-"why_dangerous": "1-2 sentence explanation of the real-world risk if exploited",
-"fix": "Concrete, specific fix — code snippet or step-by-step instruction",
-"cwe": "CWE-XXX if applicable, else null"
+    "explanation": "1-2 sentence plain English description of what this vulnerability is",
+    "why_dangerous": "1-2 sentence explanation of the real-world risk if exploited",
+    "fix": "Concrete, specific fix — code snippet or step-by-step instruction",
+    "cwe": "CWE-XXX if applicable, else null"
 }}""",
 
     "v1_secret": """You are a senior application security engineer. Analyze this leaked secret finding and respond ONLY with a valid JSON object — no preamble, no markdown, no explanation outside the JSON.
@@ -58,15 +97,15 @@ Finding details:
 
 Respond with exactly this JSON structure:
 {{
-"explanation": "1-2 sentence plain English description of what this secret leak means",
-"why_dangerous": "1-2 sentence explanation of what an attacker could do with this",
-"fix": "Concrete steps to remediate — rotate key, remove from code, use env vars etc.",
-"cwe": "CWE-798 or similar if applicable, else null"
+    "explanation": "1-2 sentence plain English description of what this secret leak means",
+    "why_dangerous": "1-2 sentence explanation of what an attacker could do with this",
+    "fix": "Concrete steps to remediate — rotate key, remove from code, use env vars etc.",
+    "cwe": "CWE-798 or similar if applicable, else null"
 }}"""
 }
 
-ACTIVE_PROMPT_VULN = "v1_vulnerability"
-ACTIVE_PROMPT_SECRET = "v1_secret"  # nosec B105
+ACTIVE_PROMPT_VULN = "v2_vulnerability"
+ACTIVE_PROMPT_SECRET = "v2_secret"  # nosec B105
 
 #Ollama client
 def  call_ollama(prompt:str, retries:int=MAX_RETRIES)-> dict | None:
@@ -226,8 +265,13 @@ def explain_single_node(node:dict,node_type:str)-> dict | None:
     Generate explanation for a single node (Vulnerability or Secret).
     Returns parsed dict on success, None on failure.
     """
+    #Retrieve RAG context first
+    context= retrieve_for_finding(node)
+    if not context:
+        context= "No additional context available"
     if node_type == "Vulnerability":
         prompt = PROMPTS[ACTIVE_PROMPT_VULN].format(
+            context=context,
             id=node.get("id", "UNKNOWN_ID"),
             severity=node.get("severity", "UNDEFINED"),
             source=node.get("source", "UNKNOWN_SOURCE"),
@@ -235,6 +279,7 @@ def explain_single_node(node:dict,node_type:str)-> dict | None:
         )
     else:  # Secret
         prompt = PROMPTS[ACTIVE_PROMPT_SECRET].format(
+            context=context,
             rule=node.get("rule", "UNDEFINED_RULE"),
             line=node.get("line", "?"),
             source=node.get("source", "UNKNOWN_SOURCE")

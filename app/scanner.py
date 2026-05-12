@@ -55,10 +55,11 @@ def run_trivy_fs(path: str = ".") -> list:
             "--format", "json",
             "--scanners", "vuln,secret,misconfig",
             "--quiet",
+            "--skip-dirs",".venv,data,tmp,tools,node_modules",
             str(BASE_DIR)
         ]
         print("Running Trivy with command:", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 180)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 300)
 
         print(f"Trivy exited with code : {result.returncode}")
         if result.returncode != 0:
@@ -67,10 +68,10 @@ def run_trivy_fs(path: str = ".") -> list:
         data = json.loads(result.stdout) if result.stdout.strip() else {}
         results = data.get("Results", [])
         total_items = sum(
-            len(result.get("Vulnerabilities", [])) +
-            len(result.get("Secrets", [])) +
-            len(result.get("Misconfigurations", []))
-            for result in results
+            len(r.get("Vulnerabilities", [])) +
+            len(r.get("Secrets", [])) +
+            len(r.get("Misconfigurations", []))
+            for r in results
         )
         print(f"Trivy processed {len(results)} results with a total of {total_items} findings.")
         return results
@@ -80,13 +81,13 @@ def run_trivy_fs(path: str = ".") -> list:
     
 def run_bandit(path: str = ".") -> list:
     try:
-        import bandit
         exclude_dirs = ",".join([
             str(BASE_DIR / ".venv"),
             str(BASE_DIR / "__pycache__"),
             str(BASE_DIR / "node_modules"),
             str(BASE_DIR / "tools"),
             str(BASE_DIR / "tmp"),
+            str(BASE_DIR / "data"),
         ])
         cmd = [
             "bandit", "-r", str(BASE_DIR),
@@ -95,7 +96,7 @@ def run_bandit(path: str = ".") -> list:
             "--exclude", exclude_dirs
         ]
         print("Running Bandit with command:", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 120)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 300)
 
         print(f"Bandit exited with code : {result.returncode}")
         data= json.loads(result.stdout) if result.stdout.strip() else {}

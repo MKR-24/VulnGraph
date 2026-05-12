@@ -158,7 +158,7 @@ def clear_and_load_data():
     findings = scan_all()
     with driver.session() as session:
         for root, _, files in os.walk(BASE_DIR):
-            if any(x in root for x in [".git", "node_modules", ".venv","tools","__pycache__","tmp"]):
+            if any(x in root for x in [".git", "node_modules", ".venv","tools","__pycache__","tmp","data"]):
                 continue
             for file in files:
                 path=normalize_path(os.path.join(root, file))
@@ -192,7 +192,7 @@ def clear_and_load_data():
                 text=f"{item.get('test_name','')} — {item.get('issue_text','')}".strip("— ")[:150],
                 confidence=item.get("issue_confidence","UNDEFINED")
             )
-        print("BANDIT SAMPLE:", findings["bandit"][0])
+     
 
         for result_obj in findings["trivy"]:
             target_path = normalize_path(result_obj.get("Target", ""))
