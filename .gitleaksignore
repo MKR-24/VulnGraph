@@ -1,0 +1,5 @@
+data/
+tmp/
+tools/
+.venv/
+node_modules/

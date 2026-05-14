@@ -1,7 +1,13 @@
-﻿__pycache__/
+﻿# ChromaDB vector store
+data/
+
+# Streamlit temp files
+tmp/
+
+# Python
+__pycache__/
 *.pyc
-.env
 .venv/
-neo4j_data/
-chroma_db/
-report*.pdf
+
+# Environment
+.env
