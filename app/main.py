@@ -15,6 +15,12 @@ NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "vulngraph123")
 
+from schemas import(
+    parse_bandit_findings,
+    parse_trivy_results,
+    parse_gitleaks_findings
+)
+
 #Streamlit Page Configuration
 st.set_page_config(
     page_title="VulnGraph",
@@ -165,64 +171,73 @@ def clear_and_load_data():
                 if path:
                     session.run("MERGE (f:File {path: $path})", path=path)
         
-        for item in findings["gitleaks"]:
-            file_path = normalize_path(item.get("File", ""))
+        #Gitleaks
+        git_valid, git_failed= parse_gitleaks_findings(findings["gitleaks"])
+        for finding in git_valid:
+            file_path=normalize_path(finding.file_path)
             if not file_path:
                 continue
-            session.run(""" 
-                MATCH (f:File {path: $file_path})
-                MERGE (s:Secret {rule: $rule, line: $line, source: 'gitleaks'})
-                MERGE (f)-[:CONTAINS]->(s)
-            """, file_path=file_path, rule=item["RuleID"], line=item["Startline"]) 
+            session.run("""
+                MATCH (f:File {path: $file_path}) 
+                MERGE (s:Secret {rule: $rule, source: 'gitleaks'})
+                ON CREATE SET s.line = $line
+                MERGE (f)-[:CONTAINS]->(s)           
+            """, file_path=file_path, rule=finding.finding_id, line=finding.line_number or 0)
 
-        for item in findings["bandit"]:
-            file_path = normalize_path(item.get("filename", ""))
+        #BANDIT
+        bandit_valid,bandit_failed=parse_bandit_findings(findings["bandit"])
+
+        for finding in bandit_valid:
+            file_path = normalize_path(finding.file_path)
             if not file_path or ".." in file_path:
                 continue
             session.run(""" 
                 MATCH (f:File {path: $file_path})
                 MERGE (v:Vulnerability {id: $issue_id,  source: 'bandit'})
-                ON CREATE SET v.severity = $severity, v.text = $text, v.confidence = $confidence
+                ON CREATE SET v.severity = $severity, v.text = $text, v.confidence = $confidence,v.cwe=$cwe
                 ON MATCH SET v.severity = $severity        
                 MERGE (f)-[:HAS_VULNERABILITY]->(v)
             """, 
                 file_path=file_path,
-                issue_id=item.get("test_id","UNKNOWN"),
-                severity=item.get("issue_severity","UNDEFINED"),
-                text=f"{item.get('test_name','')} — {item.get('issue_text','')}".strip("— ")[:150],
-                confidence=item.get("issue_confidence","UNDEFINED")
+                issue_id= finding.finding_id,
+                severity=finding.severity.value,
+                text=finding.text,
+                confidence=finding.confidence or "UNDEFINED",
+                cwe=finding.cwe or ""
             )
      
-
-        for result_obj in findings["trivy"]:
-            target_path = normalize_path(result_obj.get("Target", ""))
+        #TRIVY
+        trivy_valid,trivy_failed=parse_trivy_results(findings["trivy"])
+        for finding in trivy_valid:
+            target_path = normalize_path(finding.file_path)
             if not target_path or any(x in target_path for x in [".git", ".venv","tools"]):
                 continue
             session.run("MERGE (f:File {path: $path})", path=target_path)
-            for vuln in result_obj.get("Vulnerabilities", []):
-                session.run(""" 
+            session.run(""" 
                     MATCH (f:File {path: $file_path})
                     MERGE (v:Vulnerability {id: $vuln_id, source: 'trivy'})
-                    ON CREATE SET v.severity = $severity, v.title = $title
+                    ON CREATE SET v.severity = $severity, v.title = $title,v.pkg_name=$pkg_name,v.fixed_version=$fixed_version
                     ON MATCH SET v.severity = $severity
                     MERGE (f)-[:HAS_VULNERABILITY]->(v)
                 """, 
                     file_path=target_path,
-                    vuln_id=vuln.get("VulnerabilityID","UNKNOWN"),
-                    severity=vuln.get("Severity","UNDEFINED"),
-                    title=vuln.get("Title","")[:100],
+                    vuln_id=finding.finding_id,
+                    severity=finding.severity.value,
+                    title=finding.title or "",
+                    pkg_name=finding.pkg_name or "",
+                    fixed_version=finding.fixed_version or ""
                 )
-            for secret in result_obj.get("Secrets", []):
-                session.run(""" 
-                    MATCH (f:File {path: $file_path})
-                    MERGE (s:Secret {rule: $rule_id, source: 'trivy'})
-                    ON CREATE SET s.match= $match
-                    MERGE (f)-[:CONTAINS]->(s)
-                """, 
-                    file_path=target_path,
-                    rule_id=secret.get("RuleID","UNKNOWN"),
-                    match=secret.get("Match","")[:100]
-                )
+        trivy_secrets=[f for f in trivy_valid if not f.title and f.source.value=="trivy"]
+        for finding in trivy_secrets:
+            target_path=normalize_path(finding.file_path)
+            if not target_path:
+                continue
+            session.run("""
+                MATCH (f: File {path: $path})
+                MERGE (s:Secret {rule: $rule_id, source: 'trivy'})
+                ON CREATE SET s.match= $match
+                MERGE (f)-[:CONTAINS]->(s)
+            """, path=target_path,rule_id=finding.finding_id,match=finding.text[:100])
     return findings
 
 #Statistics
@@ -292,7 +307,7 @@ def get_explained_findings(limit = 5):
     except Exception:
         return []
 #Creating the Graph
-@st.cache_data(ttl=30)
+
 def generate_graph():
     try:
         with get_driver().session() as session:

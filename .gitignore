@@ -3,6 +3,7 @@ data/
 
 # Streamlit temp files
 tmp/
+tmp/gitleaks-report.json
 
 # Python
 __pycache__/
@@ -11,3 +12,4 @@ __pycache__/
 
 # Environment
 .env
+

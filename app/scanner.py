@@ -22,25 +22,33 @@ def run_gitleaks(repo_path: str= ".") -> list:
     if not GITLEAKS_EXE.exists():
         print("gitleaks.exe not found at", GITLEAKS_EXE)
         return []
+    report_path= BASE_DIR/ "tmp" / "gitleaks-report.json"
+    os.makedirs(BASE_DIR / "tmp",exist_ok=True)
     try:
         cmd = [
             str(GITLEAKS_EXE), "detect",
             "--source", str(BASE_DIR),
             "--config", str(BASE_DIR / "gitleaks.toml"),
             "--report-format", "json",
+            "--report-path", str(report_path),
             "--no-git",
             "--redact"
         ]
         print("Running gitleaks with command:", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 120)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 300)
 
         print(f"Gitleaks exited with code : {result.returncode}")
         if result.returncode not in [0,1]:
             print("Gitleaks error output:", result.stderr.strip())
             return []
-        findings = json.loads(result.stdout) if result.stdout.strip() else []
-        print(f"Gitleaks found {len(findings)} secrets.")
-        return findings
+        if report_path.exists():
+            with open(report_path,"r",encoding="utf-8") as f:
+                findings = json.loads(f.read())
+                print(f"Gitleaks found {len(findings)} secrets.")
+                return findings if isinstance(findings, list ) else []
+        else:
+            print("Gitleaks found 0 secrets")
+            return []
     except Exception as e:
         print("Gitleaks execution error:", str(e))
         return []
