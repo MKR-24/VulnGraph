@@ -227,7 +227,7 @@ def clear_and_load_data():
                     pkg_name=finding.pkg_name or "",
                     fixed_version=finding.fixed_version or ""
                 )
-        trivy_secrets=[f for f in trivy_valid if not f.title and f.source.value=="trivy"]
+        trivy_secrets = [f for f in trivy_valid if not f.finding_id.startswith("CVE-")]
         for finding in trivy_secrets:
             target_path=normalize_path(finding.file_path)
             if not target_path:
@@ -476,7 +476,7 @@ def render_sidebar(stats, severity_breakdown):
         <div style='font-size:11px;color:#8b949e;line-height:1.8;font-family:JetBrains Mono;'>
             Gitleaks · Trivy · Bandit<br>
             Neo4j · Pyvis · Streamlit<br>
-            Llama 3.1 via Ollama
+            Llama 3.2 via Ollama
         </div>
         """, unsafe_allow_html=True)
 
@@ -569,8 +569,22 @@ def render_main(stats, recent_findings):
         </div>
     
         """, unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-section">Agent</div>', unsafe_allow_html=True)
+        finding_input = st.text_input("Finding ID", placeholder="e.g. B404")
+        if st.button("🔧 Generate Patch", use_container_width=True):
+            if finding_input:
+                with st.spinner(f"Agent analyzing {finding_input}..."):
+                    from agent import run_agent_for_finding
+                    agent_result = run_agent_for_finding(finding_input)
+                st.markdown(f"""
+                <div style='background:#0d1117;border:1px solid #1e2d40;border-radius:6px;
+                            padding:12px;font-family:JetBrains Mono;font-size:10px;
+                            color:#c9d1d9;margin-top:8px;'>
+                    {agent_result['final_answer'][:500]}...
+                </div>
+                """, unsafe_allow_html=True)
 
-        ollama_up = check_ollama_health()
+        ollama_up = ollama_status()
         if not ollama_up:
             st.markdown("""
             <div style='background:#1a1a0d;border:1px solid #3d3000;border-radius:6px;

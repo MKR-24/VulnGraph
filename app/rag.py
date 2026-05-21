@@ -106,7 +106,47 @@ BANDIT_DOCS = [
     {"id": "bandit-B113", "text": "Bandit B113: HTTP request without timeout detected. Missing timeouts can cause resource exhaustion or denial of service. Always define reasonable timeouts for network calls.", "source": "bandit"},
     {"id": "bandit-B201", "text": "Bandit B201: Flask debug mode enabled. Debug mode exposes internal details and interactive consoles, which can lead to remote code execution in production.", "source": "bandit"},
     {"id": "bandit-B202", "text": "Bandit B202: Unsafe tarfile extraction detected. Extracting untrusted archives without validation can lead to path traversal and file overwrite attacks.", "source": "bandit"},
+    {"id": "bandit-B203", "text": "Bandit B203: Use of flask.app.run with debug=True detected. Never run Flask debug mode in production — exposes interactive debugger allowing RCE.", "source": "bandit"},
+    {"id": "bandit-B204", "text": "Bandit B204: Use of subprocess with partial executable path detected. Partial paths are vulnerable to PATH hijacking attacks.", "source": "bandit"},
+    {"id": "bandit-B301", "text": "Bandit B301: Use of pickle.loads detected. Deserializing untrusted pickle data allows arbitrary code execution. Use JSON or validate data source strictly.", "source": "bandit"},
+    {"id": "bandit-B302", "text": "Bandit B302: Use of marshal.loads detected. Marshal deserialization can execute arbitrary code. Avoid with untrusted data.", "source": "bandit"},
+    {"id": "bandit-B303", "text": "Bandit B303: Use of MD5 or SHA1 hash detected. MD5 and SHA1 are cryptographically broken. Use SHA-256 or higher for integrity, bcrypt/argon2 for passwords.", "source": "bandit"},
+    {"id": "bandit-B304", "text": "Bandit B304: Use of weak cipher DES, RC2, RC4, or Blowfish detected. These are insecure. Use AES-256-GCM or ChaCha20-Poly1305.", "source": "bandit"},
+    {"id": "bandit-B305", "text": "Bandit B305: Use of cipher with ECB mode detected. ECB mode does not provide semantic security. Use CBC, GCM, or CTR mode instead.", "source": "bandit"},
+    {"id": "bandit-B306", "text": "Bandit B306: Use of mktemp detected. mktemp is vulnerable to race conditions and symlink attacks. Use tempfile.mkstemp() instead.", "source": "bandit"},
+    {"id": "bandit-B307", "text": "Bandit B307: Use of eval detected. eval() executes arbitrary Python expressions. Avoid entirely or use ast.literal_eval() for safe parsing.", "source": "bandit"},
+    {"id": "bandit-B308", "text": "Bandit B308: Use of mark_safe detected. Marking content as safe bypasses HTML escaping and enables XSS. Only use with fully trusted content.", "source": "bandit"},
+    {"id": "bandit-B310", "text": "Bandit B310: Use of urllib.urlopen with http detected. Unvalidated URLs can lead to SSRF attacks. Validate and allowlist URLs before fetching.", "source": "bandit"},
+    {"id": "bandit-B311", "text": "Bandit B311: Use of random module for security purposes. random is not cryptographically secure. Use secrets module or os.urandom() for tokens and keys.", "source": "bandit"},
+    {"id": "bandit-B312", "text": "Bandit B312: Use of telnetlib.Telnet detected. Telnet is unencrypted. Use SSH instead.", "source": "bandit"},
+    {"id": "bandit-B313", "text": "Bandit B313: Use of xml.etree.ElementTree.parse detected. Vulnerable to XML attacks. Use defusedxml.ElementTree instead.", "source": "bandit"},
+    {"id": "bandit-B314", "text": "Bandit B314: Use of xml.etree.ElementTree.fromstring detected. Vulnerable to XML entity expansion. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B315", "text": "Bandit B315: Use of xml.etree.cElementTree detected. Vulnerable to XML attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B316", "text": "Bandit B316: Use of xml.etree.cElementTree.parse detected. Vulnerable to XML attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B317", "text": "Bandit B317: Use of xml.etree.cElementTree.fromstring detected. Vulnerable to XML attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B318", "text": "Bandit B318: Use of xml.dom.minidom.parseString detected. Vulnerable to XML attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B319", "text": "Bandit B319: Use of xml.dom.minidom.parse detected. Vulnerable to XML attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B320", "text": "Bandit B320: Use of xml.sax.parseString detected. Vulnerable to XML attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B321", "text": "Bandit B321: Use of ftplib.FTP detected. FTP transmits credentials in plaintext. Use SFTP instead.", "source": "bandit"},
+    {"id": "bandit-B322", "text": "Bandit B322: Use of input() in Python 2 detected. input() evaluates code in Python 2. Use raw_input() instead. Not applicable in Python 3.", "source": "bandit"},
+    {"id": "bandit-B323", "text": "Bandit B323: Use of unverified SSL context detected. Disabling certificate verification enables MITM attacks. Always verify SSL certificates.", "source": "bandit"},
+    {"id": "bandit-B325", "text": "Bandit B325: Use of tempnam detected. tempnam is vulnerable to race conditions. Use tempfile.mkstemp() instead.", "source": "bandit"},
     {"id": "bandit-B324", "text": "Bandit B324: Insecure or weak hashing algorithm detected. Using outdated hash functions like MD5 or SHA1 can enable collision or brute-force attacks. Use strong algorithms such as SHA-256 or better.", "source": "bandit"},
+    {"id": "bandit-B401", "text": "Bandit B401: Import of telnetlib detected. Telnet transmits data including credentials in plaintext. Use SSH via paramiko instead.", "source": "bandit"},
+    {"id": "bandit-B402", "text": "Bandit B402: Import of ftplib detected. FTP transmits data including credentials in plaintext. Use SFTP or FTPS instead.", "source": "bandit"},
+    {"id": "bandit-B403", "text": "Bandit B403: Import of pickle module detected. Deserializing pickle data from untrusted sources allows arbitrary code execution. Use JSON or other safe formats.", "source": "bandit"},
+    {"id": "bandit-B404", "text": "Bandit B404: Import of subprocess module detected. The subprocess module allows execution of system commands. If user-controlled input reaches subprocess calls without proper validation, attackers can execute arbitrary OS commands. Use subprocess.run() with a list of arguments and shell=False. Never pass user input directly to subprocess commands.", "source": "bandit"},
+    {"id": "bandit-B405", "text": "Bandit B405: Import of xml.etree detected. Python's built-in XML parsers are vulnerable to XML attacks. Use defusedxml library instead.", "source": "bandit"},
+    {"id": "bandit-B406", "text": "Bandit B406: Import of xml.sax detected. Vulnerable to XML attacks including billion laughs. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B407", "text": "Bandit B407: Import of xml.expat detected. Vulnerable to XML denial of service attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B408", "text": "Bandit B408: Import of xml.dom detected. Vulnerable to XML attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B409", "text": "Bandit B409: Import of xml.minidom detected. Vulnerable to XML entity expansion attacks. Use defusedxml instead.", "source": "bandit"},
+    {"id": "bandit-B410", "text": "Bandit B410: Import of lxml detected. lxml may be vulnerable to XML attacks depending on configuration. Use defusedxml or configure lxml to disable entity resolution.", "source": "bandit"},
+    {"id": "bandit-B411", "text": "Bandit B411: Import of xmlrpclib detected. XML-RPC can be vulnerable to XML attacks and server-side request forgery. Validate and sanitize all inputs.", "source": "bandit"},
+    {"id": "bandit-B412", "text": "Bandit B412: Import of httpoxy detected. httpoxy vulnerability allows attackers to proxy HTTP requests via the Proxy header. Unset the HTTP_PROXY environment variable.", "source": "bandit"},
+    {"id": "bandit-B413", "text": "Bandit B413: Import of pycrypto detected. PyCrypto is deprecated and unmaintained with known vulnerabilities. Use pycryptodome or cryptography library instead.", "source": "bandit"},
+    {"id": "bandit-B414", "text": "Bandit B414: Import of pycryptodome detected. Ensure you are using a current version without known vulnerabilities.", "source": "bandit"},
+    {"id": "bandit-B415", "text": "Bandit B415: Import of pyghmi detected. IPMI protocol has known security weaknesses. Ensure proper authentication and network isolation.", "source": "bandit"},
     {"id": "bandit-B501", "text": "Bandit B501: SSL certificate validation disabled. Skipping certificate verification enables man-in-the-middle attacks. Always verify server certificates in HTTPS requests.", "source": "bandit"},
     {"id": "bandit-B502", "text": "Bandit B502: SSL context with insecure protocol version detected. Using deprecated SSL/TLS versions exposes connections to known cryptographic attacks. Enforce modern TLS versions.", "source": "bandit"},
     {"id": "bandit-B503", "text": "Bandit B503: SSL context with insecure default settings detected. Weak ciphers or configurations may compromise transport security. Explicitly configure secure options.", "source": "bandit"},
@@ -179,7 +219,7 @@ def seed_kb(force:bool= False)-> int:
         
 #Retrieval
 def retrieve_context(
-        find_id:str,
+        finding_id:str,
         find_txt: str,
         severity:str = "",
         source: str="",
@@ -189,7 +229,7 @@ def retrieve_context(
     Retrieve relevant knowledge base documents for a given finding.
 
     Args:
-        find_id: vulnerability/rule ID (e.g. 'B404', 'CVE-2025-1234')
+        finding_id: vulnerability/rule ID (e.g. 'B404', 'CVE-2025-1234')
         find_text: description text of the finding
         severity: severity level for context
         source: scanner source (bandit/trivy/gitleaks)
@@ -203,7 +243,7 @@ def retrieve_context(
         print("[rag] KB is empty - Seeding started")
         seed_kb()
 
-    query = f"{find_id} {find_txt} {severity}".strip()
+    query = f"{finding_id} {find_txt} {severity}".strip()
 
     try:
         res = collection.query(
@@ -229,7 +269,7 @@ def retrieve_context(
             )
         return "\n\n".join(context_parts)
     except Exception as e:
-        print(f"[rag] Retrieval error for '{find_id}': {e}")
+        print(f"[rag] Retrieval error for '{finding_id}': {e}")
         return ""
     
 def retrieve_for_finding(node:dict)->str:
@@ -237,11 +277,11 @@ def retrieve_for_finding(node:dict)->str:
     Convenience wrapper — takes a finding node dict (as returned by Neo4j)
     and returns context string.
     """
-    find_id = node.get("id") or node.get("rule") or ""
+    finding_id = node.get("id") or node.get("rule") or ""
     find_txt= node.get("text") or ""
     severity = node.get("severity") or ""
     source = node.get("source") or ""
-    return retrieve_context(find_id,find_txt,severity,source)
+    return retrieve_context(finding_id,find_txt,severity,source)
 
 #Main function
 if __name__ == "__main__":

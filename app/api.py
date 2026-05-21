@@ -23,6 +23,7 @@ from neo4j import GraphDatabase
 from dotenv import load_dotenv
 import os
 from pathlib import Path
+from agent import run_agent_for_finding
 
 load_dotenv()
 
@@ -113,11 +114,23 @@ class ExplainResponse(BaseModel):
     status:str
     message:str
 
+class AgentRequest(BaseModel):
+    finding_id: str = Field(..., description="Finding ID to analyze e.g. B404")
+    file_path: Optional[str] = Field(None, description="Optional file path hint")
+class AgentResponse(BaseModel):
+    finding_id:   str
+    final_answer: str
+    patch:        dict
+    steps_taken:  int
+    tools_called: list[str]
+    duration_sec: float
+    model:        str
+    timestamp:    str
 
 # Background task functions
 
 def run_scan_task():
-    """Run all scannners and load findings to Neo4j"""
+    """Run all scanners and load findings to Neo4j"""
     try:
         from scanner import scan_all
         from main import clear_and_load_data
@@ -222,13 +235,13 @@ def get_findings(
                 where_clauses.append("n.source=$source")
                 params["source"]=source
             
-            where_str=("WHERE "+" AND ".join(where_clauses)) if where_clauses else ""
+            and_str=("AND "+" AND ".join(where_clauses)) if where_clauses else ""
 
             res=session.run(f"""
                 MATCH (f:File)-[]->(n)
                 WHERE n:Vulnerability OR  n:Secret
-                {where_str}
-                RETURN elementID(n) AS node_id,
+                {and_str}
+                RETURN elementId(n) AS node_id,
                         labels(n)[0] AS type,
                         CASE WHEN n:Vulnerability THEN n.id ELSE n.rule END AS id,
                         CASE WHEN n:Vulnerability THEN coalesce(n.severity,'UNKNOWN') Else 'SECRET' END AS severity,
@@ -265,7 +278,7 @@ def get_finding(finding_id:str):
                         MATCH (f:File)-[]->(n)
                         WHERE (n:Vulnerability OR n:Secret)
                         AND (n.id =$fid OR n.rule =$fid)
-                        RETURN elementID(n) AS node_id,
+                        RETURN elementId(n) AS node_id,
                                 labels(n)[0] AS type,
                                 CASE WHEN n:Vulnerability THEN n.id ELSE n.rule END AS id,
                                 CASE WHEN n:Vulnerability THEN coalesce(n.severity,'UNKNOWN') ELSE 'SECRET' END AS severity,
@@ -379,6 +392,22 @@ def trigger_explain(background_tasks: BackgroundTasks):
         status="accepted",
         message="Explanation generation started"
     )
+
+@app.post("/agent/fix", response_model=AgentResponse, tags=["Agent"])
+async def agent_fix(request: AgentRequest, background_tasks: BackgroundTasks):
+    """
+    Synchronous endpoint — blocks for 60-120 seconds.
+    For production use, convert to async with a job queue.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None, 
+        run_agent_for_finding, 
+        request.finding_id, 
+        request.file_path
+    )
+    return AgentResponse(**result)
 
 #Entry point
 if __name__ == "__main__":
