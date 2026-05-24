@@ -27,7 +27,7 @@ def run_gitleaks(repo_path: str= ".") -> list:
     try:
         cmd = [
             str(GITLEAKS_EXE), "detect",
-            "--source", str(BASE_DIR),
+            "--source", str(repo_path),
             "--config", str(BASE_DIR / "gitleaks.toml"),
             "--report-format", "json",
             "--report-path", str(report_path),
@@ -35,7 +35,7 @@ def run_gitleaks(repo_path: str= ".") -> list:
             "--redact"
         ]
         print("Running gitleaks with command:", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 300)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= str(repo_path),timeout = 300)
 
         print(f"Gitleaks exited with code : {result.returncode}")
         if result.returncode not in [0,1]:
@@ -64,10 +64,10 @@ def run_trivy_fs(path: str = ".") -> list:
             "--scanners", "vuln,secret,misconfig",
             "--quiet",
             "--skip-dirs",".venv,data,tmp,tools,node_modules",
-            str(BASE_DIR)
+            str(path)
         ]
         print("Running Trivy with command:", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 300)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= str(path),timeout = 300)
 
         print(f"Trivy exited with code : {result.returncode}")
         if result.returncode != 0:
@@ -89,22 +89,23 @@ def run_trivy_fs(path: str = ".") -> list:
     
 def run_bandit(path: str = ".") -> list:
     try:
+        scan_path=Path(path).resolve()
         exclude_dirs = ",".join([
-            str(BASE_DIR / ".venv"),
-            str(BASE_DIR / "__pycache__"),
-            str(BASE_DIR / "node_modules"),
-            str(BASE_DIR / "tools"),
-            str(BASE_DIR / "tmp"),
-            str(BASE_DIR / "data"),
+            str(scan_path / ".venv"),
+            str(scan_path / "__pycache__"),
+            str(scan_path / "node_modules"),
+            str(scan_path / "tools"),
+            str(scan_path / "tmp"),
+            str(scan_path / "data"),
         ])
         cmd = [
-            "bandit", "-r", str(BASE_DIR),
+            "bandit", "-r", str(scan_path),
             "-f", "json",
             "--quiet",
             "--exclude", exclude_dirs
         ]
         print("Running Bandit with command:", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd= BASE_DIR,timeout = 300)
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd= str(scan_path),timeout = 300)
 
         print(f"Bandit exited with code : {result.returncode}")
         data= json.loads(result.stdout) if result.stdout.strip() else {}
@@ -115,14 +116,16 @@ def run_bandit(path: str = ".") -> list:
         print("Bandit execution error:", str(e))
         return []
     
-def scan_all() -> Dict[str, List[Dict]]:
+def scan_all(target_dir: str=None) -> Dict[str, List[Dict]]:
     """Run all scanners. Returns dict with keys: gitleaks, trivy, bandit.
     Empty list per key means either clean scan OR scanner failure — check logs to distinguish."""
-    print(f"Starting comprehensive scan from base directory: {BASE_DIR}")
+    scan_target=Path(target_dir).resolve() if target_dir else BASE_DIR
+    print(f"Starting comprehensive scan from : {scan_target}")
+    
     findings={
-        "gitleaks": run_gitleaks(),
-        "trivy": run_trivy_fs(),
-        "bandit": run_bandit()
+        "gitleaks": run_gitleaks(str(scan_target)),
+        "trivy": run_trivy_fs(str(scan_target)),
+        "bandit": run_bandit(str(scan_target))
     }
     total_findings ={k : len(v) for k,v in findings.items()} 
     print(f"Scan completed with findings: {total_findings}")

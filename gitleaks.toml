@@ -1,6 +1,6 @@
 # gitleaks.toml
 title = "VulnGraph Gitleaks Config"
-
+useDefault = true
 [allowlist]
 paths = [
   ''':.*\.venv.*''',
@@ -26,5 +26,11 @@ tags = ["huggingface", "api-key"]
 [[rules]]
 id = "generic-api-token"
 description = "Generic API token in env files"
-regex = '''(?i)(token|key|secret|password)\s*=\s*[a-zA-Z0-9_\-]{20,}'''
+regex = '''(?i)(token|key|secret|password)\s*=\s*["'][a-zA-Z0-9_\-]{20,}["']'''
 tags = ["generic"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["aws", "api-key"]
