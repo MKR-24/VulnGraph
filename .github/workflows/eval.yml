@@ -9,6 +9,8 @@ on:
   schedule:
     - cron: "0 0 * * 1"  # Every Monday at midnight UTC
   workflow_dispatch:       # Allow manual trigger from GitHub UI
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   llm-eval:
