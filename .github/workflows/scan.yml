@@ -1,0 +1,171 @@
+# .github/workflows/scan.yml
+# Runs Bandit + Trivy on every push and PR
+# Posts findings summary as a PR comment
+# Fails the workflow if CRITICAL findings are found
+
+name: VulnGraph Security Scan
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit SAST
+        id: bandit
+        run: |
+          bandit -r app/ \
+            -f json \
+            --quiet \
+            --exclude app/.venv,app/__pycache__,app/tmp,app/data \
+            -o bandit-report.json || true
+          
+          # Count findings by severity
+          HIGHS=$(python3 -c "
+          import json, sys
+          try:
+              data = json.load(open('bandit-report.json'))
+              highs = sum(1 for r in data.get('results', []) if r.get('issue_severity') == 'HIGH')
+              print(highs)
+          except: print(0)
+          ")
+          
+          MEDIUMS=$(python3 -c "
+          import json
+          try:
+              data = json.load(open('bandit-report.json'))
+              mediums = sum(1 for r in data.get('results', []) if r.get('issue_severity') == 'MEDIUM')
+              print(mediums)
+          except: print(0)
+          ")
+          
+          LOWS=$(python3 -c "
+          import json
+          try:
+              data = json.load(open('bandit-report.json'))
+              lows = sum(1 for r in data.get('results', []) if r.get('issue_severity') == 'LOW')
+              print(lows)
+          except: print(0)
+          ")
+          
+          echo "highs=$HIGHS" >> $GITHUB_OUTPUT
+          echo "mediums=$MEDIUMS" >> $GITHUB_OUTPUT
+          echo "lows=$LOWS" >> $GITHUB_OUTPUT
+          echo "Bandit: HIGH=$HIGHS MEDIUM=$MEDIUMS LOW=$LOWS"
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@v0.30.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: json
+          output: trivy-report.json
+          severity: CRITICAL,HIGH,MEDIUM
+          skip-dirs: .venv,data,tmp,tools,node_modules
+
+      - name: Parse Trivy results
+        id: trivy
+        run: |
+          CRITICALS=$(python3 -c "
+          import json
+          try:
+              data = json.load(open('trivy-report.json'))
+              crits = sum(
+                  len([v for v in r.get('Vulnerabilities', []) if v.get('Severity') == 'CRITICAL'])
+                  for r in data.get('Results', [])
+              )
+              print(crits)
+          except: print(0)
+          ")
+          
+          HIGHS=$(python3 -c "
+          import json
+          try:
+              data = json.load(open('trivy-report.json'))
+              highs = sum(
+                  len([v for v in r.get('Vulnerabilities', []) if v.get('Severity') == 'HIGH'])
+                  for r in data.get('Results', [])
+              )
+              print(highs)
+          except: print(0)
+          ")
+          
+          echo "criticals=$CRITICALS" >> $GITHUB_OUTPUT
+          echo "highs=$HIGHS" >> $GITHUB_OUTPUT
+          echo "Trivy: CRITICAL=$CRITICALS HIGH=$HIGHS"
+
+      - name: Post PR comment with findings
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const banditHighs = '${{ steps.bandit.outputs.highs }}' || 0;
+            const banditMediums = '${{ steps.bandit.outputs.mediums }}' || 0;
+            const banditLows = '${{ steps.bandit.outputs.lows }}' || 0;
+            const trivyCriticals = '${{ steps.trivy.outputs.criticals }}'|| 0;
+            const trivyHighs = '${{ steps.trivy.outputs.highs }}'|| 0;
+            
+            const statusEmoji = trivyCriticals > 0 ? '🔴' : trivyHighs > 0 || banditHighs > 0 ? '🟡' : '🟢';
+            
+            const body = `## ${statusEmoji} VulnGraph Security Scan Results
+            
+            | Scanner | Critical | High | Medium | Low |
+            |---------|----------|------|--------|-----|
+            | 🔍 Trivy (SCA) | ${trivyCriticals} | ${trivyHighs} | - | - |
+            | 🐍 Bandit (SAST) | - | ${banditHighs} | ${banditMediums} | ${banditLows} |
+            
+            ${trivyCriticals > 0 ? '⛔ **CRITICAL vulnerabilities found — merge blocked**' : ''}
+            ${trivyHighs > 0 || banditHighs > 0 ? '⚠️ High severity findings require review before merge' : ''}
+            ${trivyCriticals == 0 && trivyHighs == 0 && banditHighs == 0 ? '✅ No critical or high severity findings' : ''}
+            
+            > Powered by [VulnGraph](https://github.com/your-username/VulnGraph) — AI-powered ASPM
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail on CRITICAL vulnerabilities
+        if: steps.trivy.outputs.criticals != '0'
+        run: |
+          echo "CRITICAL vulnerabilities found. Failing workflow."
+          echo "Fix these before merging:"
+          python3 -c "
+          import json
+          data = json.load(open('trivy-report.json'))
+          for r in data.get('Results', []):
+              for v in r.get('Vulnerabilities', []):
+                  if v.get('Severity') == 'CRITICAL':
+                      print(f'  - {v[\"VulnerabilityID\"]} in {v.get(\"PkgName\",\"unknown\")} ({r.get(\"Target\",\"\")})')
+          "
+          exit 1
+
+      - name: Upload scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan-reports
+          path: |
+            bandit-report.json
+            trivy-report.json
+          retention-days: 30

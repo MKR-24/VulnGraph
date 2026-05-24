@@ -1,0 +1,110 @@
+# .github/workflows/eval.yml
+# Runs the LLM evaluation harness on a schedule
+# Fails if pass rate drops below 50%
+# Tracks score trends over time via GitHub Actions artifacts
+
+name: VulnGraph LLM Evaluation
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"  # Every Monday at midnight UTC
+  workflow_dispatch:       # Allow manual trigger from GitHub UI
+
+jobs:
+  llm-eval:
+    name: LLM Quality Evaluation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install \
+            sentence-transformers \
+            scikit-learn \
+            neo4j \
+            python-dotenv
+
+      - name: Run evaluation harness
+        id: eval
+        env:
+          NEO4J_URI: ${{ secrets.NEO4J_URI }}
+          NEO4J_USER: ${{ secrets.NEO4J_USER }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+        run: |
+          cd app
+          
+          # Run eval and capture output
+          python3 -c "
+          import sys
+          sys.path.insert(0, '.')
+          from eval import run_evaluation
+          
+          summary = run_evaluation(verbose=True)
+          
+          if not summary:
+              print('No findings to evaluate')
+              print('pass_rate=0')
+              print('avg_overall=0')
+          else:
+              print(f'pass_rate={summary[\"pass_rate\"]}')
+              print(f'avg_overall={summary[\"avg_overall\"]}')
+              print(f'total_evaluated={summary[\"total_evaluated\"]}')
+          " | tee eval-output.txt
+          
+          # Extract metrics for GitHub outputs
+          PASS_RATE=$(grep "pass_rate=" eval-output.txt | tail -1 | cut -d= -f2)
+          AVG_OVERALL=$(grep "avg_overall=" eval-output.txt | tail -1 | cut -d= -f2)
+          TOTAL=$(grep "total_evaluated=" eval-output.txt | tail -1 | cut -d= -f2)
+          
+          echo "pass_rate=${PASS_RATE:-0}" >> $GITHUB_OUTPUT
+          echo "avg_overall=${AVG_OVERALL:-0}" >> $GITHUB_OUTPUT
+          echo "total_evaluated=${TOTAL:-0}" >> $GITHUB_OUTPUT
+
+      - name: Check pass rate threshold
+        id: threshold
+        run: |
+          PASS_RATE="${{ steps.eval.outputs.pass_rate }}"
+          THRESHOLD=50.0
+          
+          python3 -c "
+          pass_rate = float('${PASS_RATE}' or 0)
+          threshold = float('${THRESHOLD}')
+          if pass_rate < threshold:
+              print(f'FAIL: Pass rate {pass_rate}% is below threshold {threshold}%')
+              exit(1)
+          else:
+              print(f'PASS: Pass rate {pass_rate}% meets threshold {threshold}%')
+          "
+
+      - name: Create evaluation summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## VulnGraph LLM Evaluation Results
+          
+          | Metric | Value |
+          |--------|-------|
+          | Pass Rate | ${{ steps.eval.outputs.pass_rate }}% |
+          | Avg Overall Score | ${{ steps.eval.outputs.avg_overall }} |
+          | Total Evaluated | ${{ steps.eval.outputs.total_evaluated }} |
+          | Threshold | 50% |
+          | Status | ${{ steps.threshold.outcome == 'success' && '✅ PASS' || '❌ FAIL' }} |
+          
+          > Metrics: Relevancy (50%) + Faithfulness (30%) + CWE Accuracy (20%)
+          EOF
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results-${{ github.run_number }}
+          path: app/eval-output.txt
+          retention-days: 90
