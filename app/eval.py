@@ -391,7 +391,7 @@ def run_eval(verbose: bool = True) -> dict:
         print(f"[eval] Evaluated: {len(results)} | Skipped (no ground truth): {skipped}")
 
     #Summary stats
-    if res:
+    if results:
         avg_relevancy    = sum(r["relevancy_score"] for r in results) / len(results)
         avg_faithfulness = sum(r["faithfulness_score"] for r in results) / len(results)
         avg_cwe          = sum(r["cwe_accuracy"] for r in results) / len(results)
