@@ -12,7 +12,8 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 import chromadb
-
+from rank_bm25 import BM25Okapi
+import numpy as np
 load_dotenv()
 
 #Configuration
@@ -73,6 +74,7 @@ CWE_DOCS = [
     {"id": "cwe-77", "text": "CWE-77: Improper Neutralization of Special Elements used in a Command ('Command Injection'). Failing to neutralize special command characters allows attackers to inject and execute arbitrary system commands with the privileges of the vulnerable application.", "source": "cwe"},
     {"id": "cwe-639", "text": "CWE-639: Authorization Bypass Through User-Controlled Key.It allows attackers to manipulate user-controlled identifiers to access or modify other users' data without proper authorization checks.", "source": "cwe"},
     {"id": "cwe-770", "text": "CWE-770:  Allocation of Resources Without Limits or Throttling. allocating resources without limits allows attackers to exhaust memory, CPU, or connections, causing denial of service and system instability.", "source": "cwe"},
+    {"id": "cwe-798", "text": "CWE-798: Use of Hard-coded Credentials. The software contains hard-coded credentials such as a password or cryptographic key, which it uses for authentication or to protect sensitive data. Hard-coded credentials bypass proper credential management and cannot be rotated without a code change. Common in API tokens, database passwords, and encryption keys stored in source code.", "source": "cwe"},
 ]
 
 #OWASP Top-10
@@ -218,84 +220,253 @@ def seed_kb(force:bool= False)-> int:
     return total
         
 #Retrieval
+#Query Expansion Map
+# Manually curated expansions for common finding IDs.
+# Adds domain-specific terms that improve vector search recall.
+QUERY_EXPANSIONS = {
+    "B404": "subprocess import command injection OS command execution shell",
+    "B603": "subprocess Popen shell=False argument injection process execution",
+    "B602": "subprocess shell=True command injection shell metacharacters",
+    "B605": "os.system shell command injection process execution",
+    "B607": "partial path PATH hijacking executable",
+    "B110": "try except pass silent exception error handling logging",
+    "B105": "hardcoded password credential secret plaintext",
+    "B106": "hardcoded password function argument credential",
+    "B107": "hardcoded password default argument credential",
+    "B104": "binding network interface 0.0.0.0 exposure",
+    "B301": "pickle deserialization arbitrary code execution",
+    "B303": "MD5 SHA1 weak hash cryptography",
+    "B304": "DES RC4 weak cipher encryption",
+    "B307": "eval code injection arbitrary execution",
+    "B311": "random cryptographic insecure token",
+    "B324": "MD5 SHA1 weak hashing algorithm",
+    "B501": "SSL certificate validation MITM",
+    "B506": "yaml.load deserialization code execution",
+    "B608": "SQL injection hardcoded query string",
+    "B701": "Jinja2 autoescape XSS template injection",
+    "hugging-face-access-token": "HuggingFace API token secret credential exposed",
+    "generic-api-token": "API token secret credential hardcoded exposed",
+    "aws-access-key": "AWS access key credential secret exposed",
+}
+
+#Source filter Map
+# Maps finding ID prefixes to their knowledge base source.
+# Prevents cross-source contamination in retrieval.
+def get_source_filter(finding_id: str, source:str)-> dict | None:
+    """
+    Return ChromaDB where filter based on finding type.
+    Bandit findings → only search bandit docs
+    CVE findings → only search cwe docs
+    Secret findings → search bandit + cwe docs
+    """
+    fid= finding_id.upper()
+    if fid.startswith("B") and fid[1:].isdigit():
+        return {"source":{"$in":["bandit","owasp"]}}
+    if fid.startswith("CVE-") or fid.startswith("CWE-"):
+        return {"source":{"$in" :["cwe","owasp"]}}
+
+    return None
+
+#BM25 index
+
+_bm25_index=None
+_bm25_docs=None
+
+def get_bm25_index():
+    """
+    Build BM25 index over all knowledge base documents.
+    Cached in module scope — built once per process.
+    """
+    global _bm25_index,_bm25_docs
+    if _bm25_index is not None:
+        return _bm25_index,_bm25_docs
+    
+    all_docs= CWE_DOCS +OWASP_DOCS + BANDIT_DOCS
+    _bm25_docs=all_docs
+
+    tokenized=[
+        doc["text"].lower().replace(":"," ").replace("-"," ").split()
+        for doc in all_docs
+    ]
+    _bm25_index=BM25Okapi(tokenized)
+    return _bm25_index, _bm25_docs
+
+def bm25_search(query:str, top_k: int=5)-> list[dict]:
+    """
+    BM25 keyword search over knowledge base.
+    Returns list of {text, source, id, score} dicts sorted by score.
+    """
+    bm25,docs=get_bm25_index()
+    tokens = query.lower().replace(":", " ").replace("-", " ").split()
+    scores = bm25.get_scores(tokens)
+    top_indices=np.argsort(scores)[::-1][:top_k]
+    res=[]
+    for idx in top_indices:
+        if scores[idx] >0: 
+            res.append({
+                "text": docs[idx]["text"],
+                "source": docs[idx]["source"],
+                "id": docs[idx]["id"],
+                "score": float(scores[idx])
+            })
+    return res
+
+#Hybrid Retrieval
 def retrieve_context(
-        finding_id:str,
-        find_txt: str,
-        severity:str = "",
-        source: str="",
-        top_k: int = TOP_K
+    finding_id: str,
+    find_txt: str,
+    severity: str = "",
+    source: str = "",
+    top_k: int = TOP_K
 ) -> str:
     """
-    Retrieve relevant knowledge base documents for a given finding.
+    Hybrid RAG retrieval combining:
+    - Query expansion : enriches query with domain terms
+    - Metadata filtering : restricts search to relevant source
+    - BM25 + vector fusion : combines keyword and semantic search
 
     Args:
-        finding_id: vulnerability/rule ID (e.g. 'B404', 'CVE-2025-1234')
-        find_text: description text of the finding
-        severity: severity level for context
-        source: scanner source (bandit/trivy/gitleaks)
-        top_k: number of documents to retrieve
+        finding_id: vulnerability/rule ID e.g. 'B404', 'CVE-2025-1234'
+        find_txt:   description text of the finding
+        severity:   severity level for context
+        source:     scanner source (bandit/trivy/gitleaks)
+        top_k:      number of documents to return
 
     Returns:
         Formatted context string ready to inject into LLM prompt
     """
-    collection = get_collection()
-    if collection.count() == 0:
-        print("[rag] KB is empty - Seeding started")
+    collection= get_collection()
+    if collection.count() ==0:
+        print("[rag] KB is empty - seeding...")
         seed_kb()
+    
+    #Query Expansion
+    expansion = QUERY_EXPANSIONS.get(finding_id, "")
+    query = f"{finding_id} {find_txt} {severity} {expansion}".strip()
 
-    query = f"{finding_id} {find_txt} {severity}".strip()
+    #Metadata filtering
+    where_filter = get_source_filter(finding_id, source)
 
+    #Vector Search
     try:
-        res = collection.query(
-            query_texts=[query],
-            n_results = min(top_k, collection.count()),
-            include= ["documents", "metadatas", "distances"]
-        )
-        docs = res["documents"][0]
-        metadatas = res["metadatas"][0]
-        distances = res["distances"][0]
+        vector_kwargs={
+            "query_texts":[query],
+            "n_results":min(top_k*2,collection.count()),
+            "include":["documents","metadatas","distances"]
+        }
+        if where_filter:
+            vector_kwargs["where"]=where_filter
 
-        if not docs:
-            return ""
-        
-        #Formatting the context block for prompt injection
-        context_parts = []
-        for doc,meta,dist in zip(docs,metadatas,distances):
-            relevance= round((1-dist)*100,1)# cosine distance will give similiarity %
-            source_label=meta.get("source","").upper()
-            doc_id=meta.get("doc_id","")
-            context_parts.append(
-                f"[{source_label}-{doc_id} | Relevance: {relevance}%]\n{doc}"
-            )
-        return "\n\n".join(context_parts)
+        vector_res= collection.query(**vector_kwargs)
+        vector_docs= vector_res["documents"][0]
+        vector_metas=vector_res["metadatas"][0]
+        vector_distances=vector_res["distances"][0]
+
+        #Build scored candidates from vector search
+        #Convert cosine distance to similiarity score(0-1)
+        candidates={}
+        for doc, meta, dist in zip(vector_docs, vector_metas, vector_distances):
+            doc_id = meta.get("doc_id", "")
+            vector_score = 1 - dist  # cosine similarity
+            candidates[doc_id] = {
+                "text": doc,
+                "meta": meta,
+                "vector_score": vector_score,
+                "bm25_score": 0.0
+            }
     except Exception as e:
-        print(f"[rag] Retrieval error for '{finding_id}': {e}")
+        print(f"[rag] Vector search error for '{finding_id}': {e}")
+        candidates = {}
+    #BM-25  Search
+    try:
+        bm25_results= bm25_search(query,top_k=top_k*2)
+
+        #Normalize
+        max_bm25 = max((r["score"] for r in bm25_results), default=1.0)
+        if max_bm25 ==0:
+            max_bm25=1.0
+
+        for res in bm25_results:
+            doc_id = res["id"]
+            normalized_bm25= res["score"]/max_bm25
+
+            if doc_id in candidates:
+                candidates[doc_id]["bm25_score"]=normalized_bm25
+            else:
+                candidates[doc_id] = {
+                    "text": res["text"],
+                    "meta": {"source": res["source"], "doc_id": doc_id},
+                    "vector_score": 0.0,
+                    "bm25_score": normalized_bm25
+                }
+    except Exception as e:
+        print(f"[rag] BM25 search error: {e}")
+
+
+    #Fusion Scoring
+    # Weighted combination: vector (60%) + BM25 (40%)
+    # BM25 is weighted lower because vector search handles semantic meaning better
+    # BM25 is better at exact term matching (finding IDs, rule numbers)
+
+    VECTOR_WEIGHT=0.6
+    BM25_WEIGHT=0.4
+
+    scored=[]
+    for doc_id, data in candidates.items():
+        fusion_score=(
+            VECTOR_WEIGHT*data["vector_score"]+ BM25_WEIGHT*data["bm25_score"]
+        )
+        scored.append({
+            "doc_id":       doc_id,
+            "text":         data["text"],
+            "meta":         data["meta"],
+            "vector_score": data["vector_score"],
+            "bm25_score":   data["bm25_score"],
+            "fusion_score": fusion_score
+        })
+
+    scored.sort(key=lambda x: x["fusion_score"],reverse=True)
+    top_results= scored[:top_k]
+
+    if not top_results:
         return ""
     
-def retrieve_for_finding(node:dict)->str:
+    # Format context for LLM prompt
+    context_parts = []
+    for item in top_results:
+        relevance    = round(item["fusion_score"] * 100, 1)
+        source_label = item["meta"].get("source", "").upper()
+        doc_id       = item["meta"].get("doc_id", "")
+        context_parts.append(
+            f"[{source_label}-{doc_id} | Relevance: {relevance}%]\n{item['text']}"
+        )
+
+    return "\n\n".join(context_parts)
+
+def retrieve_for_finding(node: dict) -> str:
     """
     Convenience wrapper — takes a finding node dict (as returned by Neo4j)
     and returns context string.
     """
     finding_id = node.get("id") or node.get("rule") or ""
-    find_txt= node.get("text") or ""
-    severity = node.get("severity") or ""
-    source = node.get("source") or ""
-    return retrieve_context(finding_id,find_txt,severity,source)
+    find_txt   = node.get("text") or ""
+    severity   = node.get("severity") or ""
+    source     = node.get("source") or ""
+    return retrieve_context(finding_id, find_txt, severity, source)
 
 #Main function
 if __name__ == "__main__":
     print("Seeding initiated for KB")
     count= seed_kb(force=True)
 
-    print("\n[rag] Testing retrieval for B404 (subprocess)...")
+    print("\n[rag] Testing hybrid retrieval for B404 (subprocess)...")
     ctx = retrieve_context("B404", "import of subprocess module", "LOW", "bandit")
     print(ctx)
 
-    print("\n[rag] Testing retrieval for hardcoded password...")
+    print("\n[rag] Testing hybrid retrieval for hardcoded password...")
     ctx = retrieve_context("B105", "Possible hardcoded password", "LOW", "bandit")
     print(ctx)
 
-    print("\n[rag] Testing retrieval for CWE-78 (command injection)...")
-    ctx = retrieve_context("CWE-78", "OS command injection via user input", "HIGH", "trivy")
+    print("\n[rag] Testing retrieval for CVE (command injection)...")
+    ctx = retrieve_context("CVE-2017-18342", "PyYAML arbitrary code execution", "CRITICAL", "trivy")
     print(ctx)
