@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from scanner import scan_all
 from llm import explain_all_findings,check_ollama_health
 from pathlib import Path
+import json
 
 load_dotenv()
 
@@ -20,7 +21,23 @@ from schemas import(
     parse_trivy_results,
     parse_gitleaks_findings
 )
+DEMO_DATA_PATH = BASE_DIR / "data" / "demo_data.json"
+def load_demo_data() -> dict:
+    """Load static demo data when Neo4j is unavailable."""
+    try:
+        with open(DEMO_DATA_PATH, "r") as f:
+            return json.load(f)
+    except Exception:
+        return {"findings": [], "stats": {}, "source": "static_demo"}
 
+def is_neo4j_available() -> bool:
+    """Check if Neo4j is reachable."""
+    try:
+        with get_driver().session() as session:
+            session.run("RETURN 1")
+        return True
+    except Exception:
+        return False
 #Streamlit Page Configuration
 st.set_page_config(
     page_title="VulnGraph",
@@ -242,6 +259,15 @@ def clear_and_load_data():
 
 #Statistics
 def get_stats():
+    if not is_neo4j_available():
+        demo = load_demo_data()
+        s = demo.get("stats", {})
+        return {
+            "files": s.get("files", 0),
+            "vulns": s.get("vulns", 0),
+            "secrets": s.get("secrets", 0),
+            "high_critical": s.get("high_critical", 0)
+        }
     try:
         with get_driver().session() as session:
             row = session.run("""
@@ -269,6 +295,19 @@ def get_severity_breakdown():
         return []
     
 def get_recent_findings(limit=10):
+    if not is_neo4j_available():
+        demo = load_demo_data()
+        findings = demo.get("findings", [])[:limit]
+        return [
+            {
+                "file": f.get("file", ""),
+                "type": f.get("type", ""),
+                "id": f.get("id", ""),
+                "severity": f.get("severity", "UNKNOWN"),
+                "source": f.get("source", "")
+            }
+            for f in findings
+        ]
     try:
         with get_driver().session() as session:
             return [dict(r) for r in session.run("""
@@ -290,6 +329,10 @@ def ollama_status():
 
 def get_explained_findings(limit = 5):
     """Fetch nodes which have LLM explanations."""
+    if not is_neo4j_available():
+        demo = load_demo_data()
+        explained = [f for f in demo.get("findings", []) if f.get("explanation")][:limit]
+        return explained
     try:
         with get_driver().session() as session:
             return [dict(r) for r in session.run("""
@@ -424,11 +467,14 @@ def render_sidebar(stats, severity_breakdown):
         st.markdown('<div class="sidebar-section">Controls</div>', unsafe_allow_html=True)
 
         if st.button("▶ Run Full Scan", type="primary", use_container_width=True):
-            with st.spinner("Running scanners..."):
-                findings = clear_and_load_data()
-                counts = {k: len(v) for k, v in findings.items()}
-            st.success(f"Done — {counts}")
-            st.rerun()
+            if not is_neo4j_available():
+                st.error("Neo4j is not running. Start Docker first: docker start vulngraph-neo4j")
+            else:
+                with st.spinner("Running scanners..."):
+                    findings = clear_and_load_data()
+                    counts = {k: len(v) for k, v in findings.items()}
+                st.success(f"Done — {counts}")
+                st.rerun()
 
         if st.button("↺ Refresh View", use_container_width=True):
             st.rerun()
@@ -508,7 +554,7 @@ def render_main(stats, recent_findings):
             Attack Path Graph
         </div>
         """, unsafe_allow_html=True)
-        html_content = generate_graph()
+        html_content = generate_graph() if is_neo4j_available() else None
         if html_content:
             st.markdown('<div class="graph-container">', unsafe_allow_html=True)
             st.components.v1.html(html_content, height=660, scrolling=False)
@@ -604,8 +650,11 @@ def render_main(stats, recent_findings):
             """, unsafe_allow_html=True)
 
             if st.button("🤖 Explain Findings", use_container_width=True):
-                progress_bar = st.progress(0)
-                status_text  = st.empty()
+                if not is_neo4j_available():
+                    st.error("Neo4j is not running. Start Docker first: docker start vulngraph-neo4j")
+                else:
+                    progress_bar = st.progress(0)
+                    status_text  = st.empty()
 
                 def on_progress(current, total, message):
                     progress_bar.progress(current / total)
@@ -661,7 +710,8 @@ def render_main(stats, recent_findings):
 #Main Fn
 def main():
     stats= get_stats()
-    render_sidebar(stats, get_severity_breakdown())
+    severity = get_severity_breakdown() if is_neo4j_available() else []
+    render_sidebar(stats, severity)
     render_main(stats, get_recent_findings())
 
 main()
