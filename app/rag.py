@@ -247,6 +247,7 @@ QUERY_EXPANSIONS = {
     "hugging-face-access-token": "HuggingFace API token secret credential exposed",
     "generic-api-token": "API token secret credential hardcoded exposed",
     "aws-access-key": "AWS access key credential secret exposed",
+    "B104": "binding 0.0.0.0 network interface exposure attack surface CWE-605",
 }
 
 #Source filter Map
