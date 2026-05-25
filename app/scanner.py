@@ -130,3 +130,59 @@ def scan_all(target_dir: str=None) -> Dict[str, List[Dict]]:
     total_findings ={k : len(v) for k,v in findings.items()} 
     print(f"Scan completed with findings: {total_findings}")
     return findings
+
+def generate_sbom(path: str = None, format: str = "cyclonedx") -> dict:
+    """
+    Generate Software Bill of Materials using Trivy.
+    
+    Args:
+        path: directory to scan (defaults to BASE_DIR)
+        format: 'cyclonedx' or 'spdx-json'
+    
+    Returns:
+        dict with sbom data and metadata
+    """
+    if not TRIVY_EXE.exists():
+        return {"error": "trivy.exe not found"}
+    
+    scan_path = Path(path).resolve() if path else BASE_DIR
+    output_file = BASE_DIR / "tmp" / f"sbom-{format}.json"
+    os.makedirs(BASE_DIR / "tmp", exist_ok=True)
+
+    cmd = [
+        str(TRIVY_EXE), "fs",
+        "--format", format,
+        "--output", str(output_file),
+        "--quiet",
+        str(scan_path)
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True,
+            cwd=str(scan_path), timeout=120
+        )
+        if result.returncode != 0:
+            return {"error": result.stderr.strip()}
+        
+        if output_file.exists():
+            with open(output_file, "r", encoding="utf-8") as f:
+                sbom_data = json.load(f)
+            return {
+                "format": format,
+                "path": str(scan_path),
+                "component_count": _count_components(sbom_data, format),
+                "sbom": sbom_data
+            }
+        return {"error": "SBOM file not generated"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def _count_components(sbom_data: dict, format: str) -> int:
+    """Count components in SBOM output."""
+    if format == "cyclonedx":
+        return len(sbom_data.get("components", []))
+    elif format == "spdx-json":
+        return len(sbom_data.get("packages", []))
+    return 0

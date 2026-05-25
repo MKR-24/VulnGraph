@@ -127,6 +127,32 @@ class AgentResponse(BaseModel):
     model:        str
     timestamp:    str
 
+class SBOMResponse(BaseModel):
+    format: str
+    path: str
+    component_count: int
+    sbom: dict
+
+@app.get("/sbom", tags=["SBOM"])
+def get_sbom(
+    format: str = Query("cyclonedx", description="SBOM format: cyclonedx or spdx-json"),
+    target: Optional[str] = Query(None, description="Target path to scan")
+):
+    """
+    Generate and return a Software Bill of Materials.
+    Supports CycloneDX (OWASP) and SPDX (Linux Foundation) formats.
+    """
+    try:
+        from scanner import generate_sbom
+        result = generate_sbom(path=target, format=format)
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Background task functions
 
 def run_scan_task():
@@ -408,6 +434,8 @@ async def agent_fix(request: AgentRequest, background_tasks: BackgroundTasks):
         request.file_path
     )
     return AgentResponse(**result)
+
+
 
 #Entry point
 if __name__ == "__main__":
