@@ -11,10 +11,18 @@ import os
 import json
 from pathlib import Path
 from dotenv import load_dotenv
-import chromadb
+
 from rank_bm25 import BM25Okapi
 import numpy as np
 load_dotenv()
+
+try:
+    import chromadb
+    CHROMADB_AVAILABLE = True
+except Exception:
+    CHROMADB_AVAILABLE = False
+    print("[rag] ChromaDB not available — RAG disabled")
+
 
 #Configuration
 CHROMA_DIR = os.getenv("CHROMA_DIR" , str(Path(__file__).parent.parent/"data/chroma"))
