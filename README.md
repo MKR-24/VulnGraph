@@ -1,3 +1,12 @@
+---
+title: VulnGraph
+emoji: 🛡️
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_file: app/main.py
+pinned: false
+---
 # VulnGraph
 
 **AI-powered Application Security Posture Management (ASPM) platform.** Scans codebases for vulnerabilities and secrets, models attack paths as a graph, and generates LLM-powered explanations and code patches.
