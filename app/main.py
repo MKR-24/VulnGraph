@@ -547,7 +547,7 @@ def render_main(stats, recent_findings):
 
     with graph_col:
         st.markdown(
-        '<div class="side-bar-section">Attack Path Graph</div>'
+        '<div class="sidebar-section">Attack Path Graph</div>'
         , unsafe_allow_html=True)
         html_content = generate_graph() if is_neo4j_available() else None
         if html_content:
@@ -611,6 +611,7 @@ def render_main(stats, recent_findings):
                         agent_result = run_agent_for_finding(finding_input)
                         answer=agent_result['final_answer']
                         display=answer[:500] +("..." if len(answer) > 500 else "")
+                        display=html.escape(display)
                     st.markdown(f"""
                     <div style='background:#0d1117;border:1px solid #1e2d40;border-radius:6px;
                                 padding:12px;font-family:JetBrains Mono;font-size:10px;
