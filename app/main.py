@@ -4,8 +4,6 @@ from pyvis.network import Network
 import os
 import time
 from dotenv import load_dotenv
-from scanner import scan_all
-from llm import explain_all_findings,check_ollama_health
 from pathlib import Path
 import json
 import html
@@ -177,6 +175,7 @@ def normalize_path(raw_path: str) -> str:
 # Loading Data
 
 def clear_and_load_data():
+    from scanner import scan_all
     driver = get_driver()
     with driver.session() as session:
         session.run("MATCH (n) DETACH DELETE n")
@@ -328,6 +327,7 @@ def get_recent_findings(limit=10):
 
 @st.cache_data(ttl=10)
 def ollama_status():
+    from llm import check_ollama_health
     return check_ollama_health()
 
 def get_explained_findings(limit = 5):
@@ -643,6 +643,7 @@ def render_main(stats, recent_findings):
                     if not is_neo4j_available():
                         st.error("Neo4j is not running. Start Docker first: docker start vulngraph-neo4j")
                     else:
+                        from llm import explain_all_findings
                         progress_bar = st.progress(0)
                         status_text  = st.empty()
 
