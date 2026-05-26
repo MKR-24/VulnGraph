@@ -19,8 +19,7 @@ from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
-from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+
 
 load_dotenv()
 
@@ -122,6 +121,7 @@ def get_embed_model()->SentenceTransformer:
     """Load sentence transformer once and cache in module scope"""
     global _model
     if _model is None:
+        from sentence_transformers import SentenceTransformer
         print("[eval] Loading embedding model")
         _model=SentenceTransformer(EMBED_MODEL)
     return _model
@@ -143,6 +143,7 @@ def score_relevancy(generated:str,reference:str)->float:
     """
     if not generated or not reference:
         return 0.0
+    from sklearn.metrics.pairwise import cosine_similarity
     gen_emb=embed(generated)
     ref_embed=embed(reference)
     score=cosine_similarity(gen_emb,ref_embed)[0][0]
@@ -162,6 +163,7 @@ def score_faithfulness(generated:str,context:str)->float:
     """
     if not generated or not context:
         return 0.0
+    from sklearn.metrics.pairwise import cosine_similarity
     gen_embed=embed(generated)
     ctx_embed=embed(context)
     score=cosine_similarity(gen_embed,ctx_embed)[0][0]

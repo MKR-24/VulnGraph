@@ -13,7 +13,11 @@ from pathlib import Path
 import html as html_lib
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from eval import get_eval_history, get_summary_stats, run_eval
+try:
+    from eval import get_eval_history, get_summary_stats, run_eval
+    EVAL_AVAILABLE=True
+except Exception:
+    EVAL_AVAILABLE=False
 
 st.set_page_config(
     page_title="VulnGraph — Eval Dashboard",
@@ -232,3 +236,11 @@ with table_col:
         hide_index=True,
         height=300
     )
+if not EVAL_AVAILABLE:
+    st.markdown("""
+    <div style='text-align:center;padding:60px;color:#8b949e;font-size:13px;'>
+        Evaluation dashboard requires a local environment with Neo4j and Ollama.<br>
+        Run <code>python eval.py</code> locally to generate evaluation data.
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()

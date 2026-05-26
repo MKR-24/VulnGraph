@@ -67,6 +67,10 @@ Tested against four codebases:
 - Docker
 - [Ollama](https://ollama.ai)
 - Gitleaks and Trivy executables in `tools/`
+### Download scanner tools
+Download and place in `tools/` directory:
+- [Gitleaks](https://github.com/gitleaks/gitleaks/releases) — rename to `gitleaks.exe`
+- [Trivy](https://github.com/aquasecurity/trivy/releases) — rename to `trivy.exe`
 
 ### 1. Clone and install
 
