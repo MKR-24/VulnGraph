@@ -1,15 +1,25 @@
 ﻿# ChromaDB vector store
 data/
+!data/demo_data.json
 
 # Streamlit temp files
 tmp/
-tmp/gitleaks-report.json
+app/tmp/
+app/lib/
 
 # Python
 __pycache__/
 *.pyc
+*.pyo
 .venv/
 
 # Environment
 .env
+.env.example
 
+# OS
+.DS_Store
+Thumbs.db
+
+# Tools binaries
+tools/
