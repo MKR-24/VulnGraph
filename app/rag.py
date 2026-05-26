@@ -34,6 +34,8 @@ EMBED_MODEL = "all-MiniLM-L6-v2" # SentenceTransformer model for embeddings
 _collection = None
 def get_collection():
     """ Get Else Create ChromaDB collection with sentence transformer embeddings"""
+    if not CHROMADB_AVAILABLE:
+        raise RuntimeError("ChromaDB not available")
     import chromadb
     from chromadb.utils import embedding_functions
 
@@ -241,7 +243,6 @@ QUERY_EXPANSIONS = {
     "B105": "hardcoded password credential secret plaintext",
     "B106": "hardcoded password function argument credential",
     "B107": "hardcoded password default argument credential",
-    "B104": "binding network interface 0.0.0.0 exposure",
     "B301": "pickle deserialization arbitrary code execution",
     "B303": "MD5 SHA1 weak hash cryptography",
     "B304": "DES RC4 weak cipher encryption",
@@ -344,6 +345,8 @@ def retrieve_context(
     Returns:
         Formatted context string ready to inject into LLM prompt
     """
+    if not CHROMADB_AVAILABLE:
+        return ""
     collection= get_collection()
     if collection.count() ==0:
         print("[rag] KB is empty - seeding...")

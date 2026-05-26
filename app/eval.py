@@ -271,6 +271,8 @@ def get_eval_history(limit:int=50) -> list[dict]:
     
 def get_summary_stats()-> dict:
     """Compute aggregate stats across all eval runs"""
+    if not os.path.exists(EVAL_DB_PATH):
+        return []
     try:
         conn=sqlite3.connect(EVAL_DB_PATH)
         row=conn.execute("""
@@ -387,8 +389,8 @@ def run_eval(verbose: bool = True) -> dict:
             status= "Pass" if overall >=0.6 else "FAIL"
             print(f"{status} | {fid:<35} | relevancy={relevancy:.3f} | faithfulness={faithfulness:.3f} | cwe={cwe_acc:.1f} | overall={overall:.3f}")
         
-        print("-" * 60)
-        print(f"[eval] Evaluated: {len(results)} | Skipped (no ground truth): {skipped}")
+    print("-" * 60)
+    print(f"[eval] Evaluated: {len(results)} | Skipped (no ground truth): {skipped}")
 
     #Summary stats
     if results:

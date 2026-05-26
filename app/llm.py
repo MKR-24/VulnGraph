@@ -17,20 +17,29 @@ import os
 import requests
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
-from rag import retrieve_for_finding,seed_kb,is_seeded
 import re
 
 load_dotenv()
 
 #Configurations
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi3:latest")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "vulngraph123")
 
 BATCH_DELAY = 3.0  # seconds between Ollama calls to avoid overload
 MAX_RETRIES = 2  # max retries for Ollama calls
+
+
+try:
+    from rag import retrieve_for_finding, seed_kb, is_seeded
+    RAG_AVAILABLE = True
+except Exception:
+    RAG_AVAILABLE = False
+    def retrieve_for_finding(node): return ""
+    def seed_kb(force=False): return 0
+    def is_seeded(): return False
 
 #Prompt Template
 PROMPTS = {
@@ -269,12 +278,18 @@ def explain_single_node(node:dict,node_type:str)-> dict | None:
     Generate explanation for a single node (Vulnerability or Secret).
     Returns parsed dict on success, None on failure.
     """
+
     #Retrieve RAG context first
-    context= retrieve_for_finding(node)
+
+    if RAG_AVAILABLE:
+        context= retrieve_for_finding(node)
+    else:
+        context= ""
     if not context:
         context= "No additional context available"
     if node_type == "Vulnerability":
-        prompt = PROMPTS[ACTIVE_PROMPT_VULN].format(
+        prompt_key = ACTIVE_PROMPT_VULN if RAG_AVAILABLE else "v1_vulnerability"
+        prompt = PROMPTS[prompt_key].format(
             context=context,
             id=node.get("id", "UNKNOWN_ID"),
             severity=node.get("severity", "UNDEFINED"),
@@ -282,7 +297,8 @@ def explain_single_node(node:dict,node_type:str)-> dict | None:
             text=node.get("text", "No description provided.")[:1000]  # Truncate long descriptions to fit prompt limits
         )
     else:  # Secret
-        prompt = PROMPTS[ACTIVE_PROMPT_SECRET].format(
+        prompt_key = ACTIVE_PROMPT_SECRET if RAG_AVAILABLE else "v1_secret"
+        prompt = PROMPTS[prompt_key].format(
             context=context,
             rule=node.get("rule", "UNDEFINED_RULE"),
             line=node.get("line", "?"),
