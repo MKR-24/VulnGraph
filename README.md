@@ -4,7 +4,7 @@ emoji: 🛡️
 colorFrom: green
 colorTo: blue
 sdk: docker
-app_file: app/main.py
+app_port: 8501
 pinned: false
 ---
 # VulnGraph
