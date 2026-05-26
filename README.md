@@ -263,7 +263,7 @@ Model comparison results:
 | Agent | Deterministic 5-step pipeline |
 | MCP | Model Context Protocol (Anthropic) |
 | CI/CD | GitHub Actions |
-| Deployment | Render |
+| Deployment | Render, Hugging Face Spaces |
 
 ---
 
