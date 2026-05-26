@@ -14,7 +14,7 @@ pinned: false
 > ⚠️ **For full functionality, run locally.** The deployed demo runs in static mode — scans, LLM explanations, and agent patches require a local environment with Neo4j and Ollama.
 
 **Live Demo**
-- Dashboard: https://vulngraph-dashboard.onrender.com
+- Dashboard: https://huggingface.co/spaces/MKR-24/VulnGraph
 - API: https://vulngraph-api.onrender.com
 - API Docs: https://vulngraph-api.onrender.com/docs
 
