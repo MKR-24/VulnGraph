@@ -20,7 +20,7 @@ from schemas import(
     parse_trivy_results,
     parse_gitleaks_findings
 )
-DEMO_DATA_PATH = BASE_DIR / "data" / "demo_data.json"
+DEMO_DATA_PATH = BASE_DIR / "app" / "demo_data.json"
 def load_demo_data() -> dict:
     """Load static demo data when Neo4j is unavailable."""
     try:
