@@ -18,7 +18,7 @@ import requests
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 from rag import retrieve_for_finding,seed_kb,is_seeded
-
+import re
 
 load_dotenv()
 
@@ -139,6 +139,10 @@ def  call_ollama(prompt:str, retries:int=MAX_RETRIES)-> dict | None:
                 if raw.startswith("json"):
                     raw = raw[4:]
                 raw = raw.strip()
+            if not raw.startswith("{"):
+                match = re.search(r"\{.*\}", raw, re.DOTALL)
+                if match:
+                    raw = match.group()
 
             parsed = json.loads(raw)
 

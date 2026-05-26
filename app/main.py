@@ -8,6 +8,7 @@ from scanner import scan_all
 from llm import explain_all_findings,check_ollama_health
 from pathlib import Path
 import json
+import html
 
 load_dotenv()
 
@@ -49,112 +50,114 @@ st.set_page_config(
 #CSS
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
 
-            html, body, [class*="css"] {
+html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
-    background-color: #0a0e1a;
+    background-color: #0d1117;
     color: #c9d1d9;
 }
-.stApp { background: #0a0e1a; }
+.stApp { background: #0d1117; }
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
 
 [data-testid="stSidebar"] {
-    background: #0d1117;
-    border-right: 1px solid #1e2d40;
+    background: #010409;
+    border-right: 1px solid #21262d;
 }
 [data-testid="stSidebar"] * { color: #c9d1d9 !important; }
+:root { --accent: #4fc3a1; --accent-dim: #2a5c4e; }
 
 .stButton > button {
-    background: linear-gradient(135deg, #00ff88 0%, #00c9ff 100%);
-    color: #0a0e1a !important;
-    border: none;
-    border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 700;
+    background: transparent;
+    color: var(--accent) !important;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
     font-size: 13px;
-    letter-spacing: 0.5px;
-    padding: 10px 24px;
-    transition: all 0.2s ease;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    padding: 8px 20px;
+    transition: background 0.15s ease;
+    text-transform: none;
 }
 .stButton > button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+    background: var(--accent-dim);
+    transform: none;
+    box-shadow: none;
 }
 
 [data-testid="stMetric"] {
-    background: #0d1117;
-    border: 1px solid #1e2d40;
-    border-radius: 8px;
-    padding: 16px;
+    background: #010409;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 14px;
 }
 [data-testid="stMetric"] label {
     color: #8b949e !important;
-    font-family: 'JetBrains Mono', monospace;
     font-size: 11px !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
 }
 [data-testid="stMetric"] [data-testid="stMetricValue"] {
-    color: #00ff88 !important;
+    color: #e6edf3 !important;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 28px !important;
-    font-weight: 700;
+    font-size: 26px !important;
+    font-weight: 600;
 }
-
-div[data-testid="stAlert"] { border-radius: 6px; }
-
-[data-testid="stExpander"] {
-    background: #0d1117;
-    border: 1px solid #1e2d40;
-    border-radius: 8px;
-}
-
-hr { border-color: #1e2d40; }
 
 code {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono',monospace;
     background: #161b22;
-    color: #00ff88;
+    color: var(--accent);
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 3px;
     font-size: 12px;
 }
-
-.vulngraph-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 28px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #00ff88, #00c9ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.5px;
-}
-.vulngraph-subtitle {
-    font-size: 13px;
-    color: #8b949e;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.5px;
-}
 .sidebar-section {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    font-size: 11px;
+    font-weight: 600;
     color: #8b949e;
-    margin: 16px 0 8px 0;
-    border-bottom: 1px solid #1e2d40;
-    padding-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 20px 0 8px 0;
 }
+.app-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: #e6edf3;      
+    letter-spacing: -0.3px;
+}
+.app-subtitle {
+    font-size: 12px;
+    color: #8b949e;
+    margin-top: 2px;
+}
+.finding-card {
+    background: #010409;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+}     
 .graph-container {
-    border: 1px solid #1e2d40;
-    border-radius: 10px;
+    border: 1px solid #21262d;
+    border-radius: 6px;
     overflow: hidden;
+    background: #010409;
+}  
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+    background-color: var(--accent);
 }
+[data-testid="stTabs"] [data-baseweb="tab"] {
+    color: #8b949e;
+}
+[data-testid="stTabs"] [aria-selected="true"] {
+    color: #e6edf3 !important;
+}                    
 </style>
 """, unsafe_allow_html=True)
 
@@ -363,18 +366,17 @@ def generate_graph():
     
     net = Network(height="650px", width="100%", directed=True, bgcolor="#0d1117", font_color="#c9d1d9")
     net.toggle_physics(True)
-    net.set_options('''
+    net.set_options("""
         {
         "edges": {
             "arrows": {"to": {"enabled": true, "scaleFactor": 1.5}},
-            "color": {"color": "#1e3a5f", "highlight": "#00ff88"},
+            "color": {"color": "#1e3a5f", "highlight": "#4a90d9"},
             "width": 1.8,
             "smooth": {"enabled": true, "type": "continuous"}
         },
         "nodes": {
             "font": {"color": "#c9d1d9", "size": 13, "face": "monospace"},
-            "borderWidth": 2,
-            "shadow": {"enabled": true, "color": "rgba(0,255,136,0.15)", "size": 8}
+            "borderWidth": 2
         },
         "physics": {
             "enabled": true,
@@ -382,8 +384,8 @@ def generate_graph():
         },
         "interaction": {"hover": true, "tooltipDelay": 100, "hideEdgesOnDrag": true}
     }
-    ''')
-    SEV_COLORS = {"CRITICAL": "#ff4444", "HIGH": "#ff8c00", "MEDIUM": "#ffd700", "LOW": "#00ff88"}
+    """)
+    SEV_COLORS = {"CRITICAL": "#ff4444", "HIGH": "#ff8c00", "MEDIUM": "#ffd700", "LOW": "#4fc3a1"}
     nodes_added = set()
 
     def add_node(node):
@@ -396,15 +398,15 @@ def generate_graph():
         if label == "File":
             path= node.get("path", "")
             short = path.split("/")[-1] or path
-            title = f"📄 {path}"
-            display = f"📄 {short}"
+            title = f" {path}"
+            display = f"{short}"
             color = {"background": "#1a2744", "border": "#2d5a8e", "highlight": {"border": "#00c9ff"}}
             size = 18
 
         elif label == "Secret":
             rule = node.get("rule", "?")
-            title = f"🔑 Secret | Rule: {rule} | Line: {node.get('line','?')} | Source: {source}"
-            display = f"🔑 {rule[:20]}"
+            title = f"Secret | Rule: {rule} | Line: {node.get('line','?')} | Source: {source}"
+            display = f"{rule[:20]}"
             color = {"background": "#3d1a1a", "border": "#e06c75", "highlight": {"border": "#ff4444"}}
             size = 22
 
@@ -414,12 +416,12 @@ def generate_graph():
             sev_color = SEV_COLORS.get(sev, "#8b949e")
             text = node.get("text") or node.get("title") or ""
             explanation = node.get("explanation", "")
-            title = f"⚠️ {vid} | {sev} | {source}"
+            title = f"{vid} | {sev} | {source}"
             if text:
                 title += f"\n{text[:120]}"
             if explanation:
-                title += f"\n\n💡 {explanation[:200]}"
-            display = f"⚠️ {vid[:18]}"
+                title += f"\n\n{explanation[:200]}"
+            display = f"{vid[:18]}"
             color = {"background": "#2a1f0a", "border": sev_color, "highlight": {"border": sev_color}}
             size = 26 if sev in ["CRITICAL", "HIGH"] else 20
 
@@ -454,19 +456,16 @@ def render_sidebar(stats, severity_breakdown):
     with st.sidebar:
         st.markdown("""
         <div style='text-align:center;padding:8px 0 20px 0;'>
-            <div style='font-family:JetBrains Mono,monospace;font-size:22px;font-weight:700;
-                        background:linear-gradient(135deg,#00ff88,#00c9ff);
-                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-                        background-clip:text;'>🛡️ VulnGraph</div>
+            <div style='font-family:Inter,sans-serif;font-size:22px;font-weight:700;'>VulnGraph</div>
             <div style='font-size:11px;color:#8b949e;letter-spacing:1px;margin-top:4px;'>
-                ASPM PLATFORM v0.1
+                ASPM PLATFORM 
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown('<div class="sidebar-section">Controls</div>', unsafe_allow_html=True)
 
-        if st.button("▶ Run Full Scan", type="primary", use_container_width=True):
+        if st.button("Run Full Scan", type="primary", use_container_width=True):
             if not is_neo4j_available():
                 st.error("Neo4j is not running. Start Docker first: docker start vulngraph-neo4j")
             else:
@@ -476,7 +475,7 @@ def render_sidebar(stats, severity_breakdown):
                 st.success(f"Done — {counts}")
                 st.rerun()
 
-        if st.button("↺ Refresh View", use_container_width=True):
+        if st.button("Refresh View", use_container_width=True):
             st.rerun()
 
         st.markdown('<div class="sidebar-section">Risk Summary</div>', unsafe_allow_html=True)
@@ -490,7 +489,7 @@ def render_sidebar(stats, severity_breakdown):
 
         if severity_breakdown:
             st.markdown('<div class="sidebar-section">Severity Breakdown</div>', unsafe_allow_html=True)
-            SEV_COLORS = {"CRITICAL": "#ff4444", "HIGH": "#ff8c00", "MEDIUM": "#ffd700", "LOW": "#00ff88"}
+            SEV_COLORS = {"CRITICAL": "#ff4444", "HIGH": "#ff8c00", "MEDIUM": "#ffd700", "LOW": "#4fc3a1"}
             for sev, count in severity_breakdown:
                 color = SEV_COLORS.get(sev.upper(), "#8b949e")
                 pct = min(count / max(stats["vulns"], 1) * 100, 100)
@@ -501,8 +500,7 @@ def render_sidebar(stats, severity_breakdown):
                         <span style='font-family:JetBrains Mono;font-size:11px;color:#8b949e;'>{count}</span>
                     </div>
                     <div style='background:#1e2d40;border-radius:3px;height:4px;'>
-                        <div style='width:{pct:.0f}%;background:{color};height:4px;border-radius:3px;
-                                    box-shadow:0 0 6px {color}88;'></div>
+                        <div style='width:{pct:.0f}%;background:{color};height:4px;border-radius:3px;'></div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -529,31 +527,28 @@ def render_sidebar(stats, severity_breakdown):
 #MAIN Page
 def render_main(stats, recent_findings):
     st.markdown("""
-    <div style='padding:8px 0 24px 0;'>
-        <div class='vulngraph-title'>VulnGraph</div>
-        <div class='vulngraph-subtitle'>// APPLICATION SECURITY POSTURE MANAGEMENT</div>
+    <div style='padding:4px 0 20px 0;'>
+        <div class='app-title' style='text-align:left;'>VulnGraph</div>
+        <div class='app-subtitle'>APPLICATION SECURITY POSTURE MANAGEMENT</div>
     </div>
     """, unsafe_allow_html=True)
 
     # Metrics row
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("📁 Files Scanned", stats["files"])
-    c2.metric("🔍 Vulnerabilities", stats["vulns"])
-    c3.metric("🔑 Secrets Found", stats["secrets"])
-    c4.metric("🚨 High / Critical", stats["high_critical"])
-    c5.metric("⚡ Total Findings", stats["vulns"] + stats["secrets"])
+    c1.metric("Files Scanned", stats["files"])
+    c2.metric("Vulnerabilities", stats["vulns"])
+    c3.metric("Secrets Found", stats["secrets"])
+    c4.metric("High / Critical", stats["high_critical"])
+    c5.metric("Total Findings", stats["vulns"] + stats["secrets"])
 
     st.markdown("<hr style='margin:8px 0 20px 0;'>", unsafe_allow_html=True)
 
     graph_col, detail_col = st.columns([3, 1])
 
     with graph_col:
-        st.markdown("""
-        <div style='font-family:JetBrains Mono;font-size:11px;color:#8b949e;
-                    text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;'>
-            Attack Path Graph
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+        '<div class="side-bar-section">Attack Path Graph</div>'
+        , unsafe_allow_html=True)
         html_content = generate_graph() if is_neo4j_available() else None
         if html_content:
             st.markdown('<div class="graph-container">', unsafe_allow_html=True)
@@ -569,25 +564,23 @@ def render_main(stats, recent_findings):
             """, unsafe_allow_html=True)
 
     with detail_col:
-        st.markdown("""
-        <div style='font-family:JetBrains Mono;font-size:11px;color:#8b949e;
-                    text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;'>
-            Recent Findings
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-section">Recent Findings</div>'
+        , unsafe_allow_html=True)
 
         SEV_COLORS = {
             "CRITICAL": "#ff4444", "HIGH": "#ff8c00", "MEDIUM": "#ffd700",
-            "LOW": "#00ff88", "SECRET": "#c678dd", "UNDEFINED": "#8b949e", "UNKNOWN": "#8b949e"
+            "LOW": "#4fc3a1", "SECRET": "#c678dd", "UNDEFINED": "#8b949e", "UNKNOWN": "#8b949e"
         }
 
         if recent_findings:
             for f in recent_findings:
                 sev = (f.get("severity") or "UNKNOWN").upper()
                 color = SEV_COLORS.get(sev, "#8b949e")
-                icon = "🔑" if f.get("type") == "Secret" else "⚠️"
+                icon = "S" if f.get("type") == "Secret" else "V"
                 file_short = (f.get("file") or "").split("/")[-1] or "unknown"
                 vuln_id = (f.get("id") or "")[:24]
+                vuln_id=html.escape(vuln_id)
+                file_short=html.escape(file_short)
                 st.markdown(f"""
                 <div style='background:#0d1117;border:1px solid #1e2d40;border-left:3px solid {color};
                             border-radius:6px;padding:10px 12px;margin-bottom:8px;'>
@@ -597,7 +590,7 @@ def render_main(stats, recent_findings):
                     <div style='font-family:JetBrains Mono;font-size:10px;color:#c9d1d9;word-break:break-all;margin-bottom:3px;'>
                         {vuln_id}
                     </div>
-                    <div style='font-size:10px;color:#8b949e;'>📄 {file_short}</div>
+                    <div style='font-size:10px;color:#8b949e;'>{file_short}</div>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -607,105 +600,103 @@ def render_main(stats, recent_findings):
             """, unsafe_allow_html=True)
 
         # LLM Explanations panel
-        st.markdown("""
-        <div style='font-family:JetBrains Mono;font-size:11px;color:#8b949e;
-                    text-transform:uppercase;letter-spacing:2px;
-                    margin:16px 0 8px 0;border-top:1px solid #1e2d40;padding-top:12px;'>
-            AI Explanations
-        </div>
-    
-        """, unsafe_allow_html=True)
-        st.markdown('<div class="sidebar-section">Agent</div>', unsafe_allow_html=True)
-        finding_input = st.text_input("Finding ID", placeholder="e.g. B404")
-        if st.button("🔧 Generate Patch", use_container_width=True):
-            if finding_input:
-                with st.spinner(f"Agent analyzing {finding_input}..."):
-                    from agent import run_agent_for_finding
-                    agent_result = run_agent_for_finding(finding_input)
-                st.markdown(f"""
-                <div style='background:#0d1117;border:1px solid #1e2d40;border-radius:6px;
-                            padding:12px;font-family:JetBrains Mono;font-size:10px;
-                            color:#c9d1d9;margin-top:8px;'>
-                    {agent_result['final_answer'][:500]}...
+        st.markdown("<hr style='margin:20px 0 16px 0;'>", unsafe_allow_html=True)
+        tab1, tab2 = st.tabs(["Patch Agent", "AI Explanations"])
+        with tab1:
+            finding_input = st.text_input("Finding ID", placeholder="e.g. B404")
+            if st.button("Generate Patch", use_container_width=True):
+                if finding_input:
+                    with st.spinner(f"Agent analyzing {finding_input}..."):
+                        from agent import run_agent_for_finding
+                        agent_result = run_agent_for_finding(finding_input)
+                        answer=agent_result['final_answer']
+                        display=answer[:500] +("..." if len(answer) > 500 else "")
+                    st.markdown(f"""
+                    <div style='background:#0d1117;border:1px solid #1e2d40;border-radius:6px;
+                                padding:12px;font-family:JetBrains Mono;font-size:10px;
+                                color:#c9d1d9;margin-top:8px;'>
+                        {display}
+                    </div>
+                    """, unsafe_allow_html=True)
+        with tab2:
+            st.markdown('<div class="sidebar-section">AI Explanations</div>', unsafe_allow_html=True)
+            ollama_up = ollama_status()
+            if not ollama_up:
+                st.markdown("""
+                <div style='background:#1a1a0d;border:1px solid #3d3000;border-radius:6px;
+                            padding:10px 12px;font-size:11px;color:#ffd700;
+                            font-family:JetBrains Mono;line-height:1.8;'>
+                            Ollama not running<br>
+                    <span style='color:#8b949e;'>Start with: ollama serve</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style='background:#0a1f0a;border:1px solid #1a3d1a;border-radius:6px;
+                            padding:8px 12px;font-size:11px;color:#4fc3a1;
+                            font-family:JetBrains Mono;margin-bottom:10px;'>
+                    ✓ Ollama connected
                 </div>
                 """, unsafe_allow_html=True)
 
-        ollama_up = ollama_status()
-        if not ollama_up:
-            st.markdown("""
-            <div style='background:#1a1a0d;border:1px solid #3d3000;border-radius:6px;
-                        padding:10px 12px;font-size:11px;color:#ffd700;
-                        font-family:JetBrains Mono;line-height:1.8;'>
-                ⚠️ Ollama not running<br>
-                <span style='color:#8b949e;'>Start with: ollama serve</span>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div style='background:#0a1f0a;border:1px solid #1a3d1a;border-radius:6px;
-                        padding:8px 12px;font-size:11px;color:#00ff88;
-                        font-family:JetBrains Mono;margin-bottom:10px;'>
-                ✓ Ollama connected
-            </div>
-            """, unsafe_allow_html=True)
+                if st.button("Explain Findings", use_container_width=True):
+                    if not is_neo4j_available():
+                        st.error("Neo4j is not running. Start Docker first: docker start vulngraph-neo4j")
+                    else:
+                        progress_bar = st.progress(0)
+                        status_text  = st.empty()
 
-            if st.button("🤖 Explain Findings", use_container_width=True):
-                if not is_neo4j_available():
-                    st.error("Neo4j is not running. Start Docker first: docker start vulngraph-neo4j")
-                else:
-                    progress_bar = st.progress(0)
-                    status_text  = st.empty()
+                        def on_progress(current, total, message):
+                            progress_bar.progress(current / total)
+                            status_text.markdown(
+                                f"<div style='font-family:JetBrains Mono;font-size:10px;color:#8b949e;'>"
+                                f"{message} ({current}/{total})</div>",
+                                unsafe_allow_html=True
+                            )
+                    
+                        results= explain_all_findings(on_progress)
+                        progress_bar.progress(1.0)
 
-                def on_progress(current, total, message):
-                    progress_bar.progress(current / total)
-                    status_text.markdown(
-                        f"<div style='font-family:JetBrains Mono;font-size:10px;color:#8b949e;'>"
-                        f"{message} ({current}/{total})</div>",
-                        unsafe_allow_html=True
-                    )
-                
-                results= explain_all_findings(on_progress)
-                progress_bar.progress(1.0)
+                        if results.get("error"):
+                            st.error(results["error"])
+                        else:
+                            st.markdown(f"""
+                            <div style='background:#0a1f0a;border:1px solid #1a3d1a;border-radius:6px;
+                                        padding:10px 12px;font-family:JetBrains Mono;font-size:11px;
+                                        color:#4fc3a1;line-height:1.8;margin-top:8px;'>
+                                ✓ {results['success']} explained<br>
+                                <span style='color:#ff8c00;'>✗ {results['failed']} failed</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            time.sleep(1)
+                            st.rerun()
+    
+            # Show sample of existing explanations
+            explained = get_explained_findings()
+            if explained:
+                st.markdown('<div class="sidebar-section">Latest Explanations</div>'
+                , unsafe_allow_html=True)
+                for item in explained[:3]:
+                    sev = (item.get("severity") or "").upper()
+                    SEV_COLORS = {"CRITICAL":"#ff4444","HIGH":"#ff8c00","MEDIUM":"#ffd700","LOW":"#4fc3a1"}
+                    color = SEV_COLORS.get(sev, "#8b949e")
+                    explanation = html.escape(item.get('explanation', '—'))
+                    why_dangerous = html.escape(item.get('why_dangerous', '—'))
+                    fix = html.escape(item.get('fix', '—'))
+                    cwe = html.escape(item.get('cwe', 'N/A'))
 
-                if results.get("error"):
-                    st.error(results["error"])
-                else:
-                    st.markdown(f"""
-                    <div style='background:#0a1f0a;border:1px solid #1a3d1a;border-radius:6px;
-                                padding:10px 12px;font-family:JetBrains Mono;font-size:11px;
-                                color:#00ff88;line-height:1.8;margin-top:8px;'>
-                        ✓ {results['success']} explained<br>
-                        <span style='color:#ff8c00;'>✗ {results['failed']} failed</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    time.sleep(1)
-                    st.rerun()
-            
-        # Show sample of existing explanations
-        explained = get_explained_findings()
-        if explained:
-            st.markdown("""
-            <div style='font-family:JetBrains Mono;font-size:10px;color:#8b949e;
-                        text-transform:uppercase;letter-spacing:1px;margin:12px 0 6px 0;'>
-                Latest Explanations
-            </div>
-            """, unsafe_allow_html=True)
-            for item in explained[:3]:
-                sev = (item.get("severity") or "").upper()
-                SEV_COLORS = {"CRITICAL":"#ff4444","HIGH":"#ff8c00","MEDIUM":"#ffd700","LOW":"#00ff88"}
-                color = SEV_COLORS.get(sev, "#8b949e")
-                with st.expander(f"{item.get('id', item.get('rule', '?'))} — {sev}"):
-                    st.markdown(f"""
-                    <div style='font-family:JetBrains Mono;font-size:11px;line-height:1.8;'>
-                        <span style='color:#8b949e;'>WHAT</span><br>
-                        <span style='color:#c9d1d9;'>{item.get('explanation','—')}</span><br><br>
-                        <span style='color:#8b949e;'>RISK</span><br>
-                        <span style='color:{color};'>{item.get('why_dangerous','—')}</span><br><br>
-                        <span style='color:#8b949e;'>FIX</span><br>
-                        <span style='color:#00ff88;'>{item.get('fix','—')}</span><br><br>
-                        <span style='color:#8b949e;'>CWE: {item.get('cwe','N/A')}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    with st.expander(f"{item.get('id', item.get('rule', '?'))[:20]} — {sev}"):
+                        st.markdown(f"""
+                        <div style='font-family:JetBrains Mono;font-size:11px;line-height:1.8;'>
+                            <span style='color:#8b949e;'>WHAT</span><br>
+                            <span style='color:#c9d1d9;'>{explanation}</span><br><br>
+                            <span style='color:#8b949e;'>RISK</span><br>
+                            <span style='color:{color};'>{why_dangerous}</span><br><br>
+                            <span style='color:#8b949e;'>FIX</span><br>
+                            <span style='color:#4fc3a1;'>{fix}</span><br><br>
+                            <span style='color:#8b949e;'>CWE: {cwe}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
 
 #Main Fn
 def main():
