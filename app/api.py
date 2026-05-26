@@ -133,6 +133,9 @@ class SBOMResponse(BaseModel):
     component_count: int
     sbom: dict
 
+class RepoScanRequest(BaseModel):
+    repo_url: str = Field(..., description="Public GitHub repo URL")
+    
 @app.get("/sbom", tags=["SBOM"])
 def get_sbom(
     format: str = Query("cyclonedx", description="SBOM format: cyclonedx or spdx-json"),
@@ -435,7 +438,25 @@ async def agent_fix(request: AgentRequest, background_tasks: BackgroundTasks):
     )
     return AgentResponse(**result)
 
-
+def clone_and_scan(repo_url: str):
+    import subprocess
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        result = subprocess.run(
+            ["git", "clone", "--depth", "1", repo_url, tmpdir],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode != 0:
+            print(f"[api] Clone failed: {result.stderr}")
+            return
+        from scanner import scan_all
+        findings = scan_all(target_dir=tmpdir)
+        print(f"[api] Scan complete: { {k: len(v) for k, v in findings.items()} }")
+    
+@app.post("/scan/repo", tags=["Actions"], status_code=202)
+async def scan_repo(request: RepoScanRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(clone_and_scan, request.repo_url)
+    return {"status": "accepted", "repo": request.repo_url}
 
 #Entry point
 if __name__ == "__main__":
