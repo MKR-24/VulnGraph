@@ -73,7 +73,14 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
-
+if not EVAL_AVAILABLE:
+    st.markdown("""
+    <div style='text-align:center;padding:60px;color:#8b949e;font-size:13px;'>
+        Evaluation dashboard requires a local environment with Neo4j and Ollama.<br>
+        Run <code>python eval.py</code> locally to generate evaluation data.
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
 # ── Run eval button ───────────────────────────────────────────────────────────
 col_btn, col_info = st.columns([1, 3])
 with col_btn:
@@ -236,11 +243,3 @@ with table_col:
         hide_index=True,
         height=300
     )
-if not EVAL_AVAILABLE:
-    st.markdown("""
-    <div style='text-align:center;padding:60px;color:#8b949e;font-size:13px;'>
-        Evaluation dashboard requires a local environment with Neo4j and Ollama.<br>
-        Run <code>python eval.py</code> locally to generate evaluation data.
-    </div>
-    """, unsafe_allow_html=True)
-    st.stop()
