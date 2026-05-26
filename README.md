@@ -200,7 +200,20 @@ Available tools: `query_attack_graph`, `search_knowledge_base`, `get_file_contex
 | POST | `/agent/fix` | Run agent to generate code patch |
 
 ---
+## CI/CD
 
+[![Security Scan](https://github.com/MKR-24/VulnGraph/actions/workflows/scan.yml/badge.svg)](https://github.com/MKR-24/VulnGraph/actions/workflows/scan.yml)
+
+**`scan.yml`** — triggers on every push and PR
+- Runs Bandit (SAST) and Trivy (SCA)
+- Posts findings summary as PR comment
+- Fails workflow if CRITICAL CVEs are found
+- Uploads scan reports as artifacts (30-day retention)
+
+**`eval.yml`** — runs every Monday
+- Evaluates LLM explanation quality against ground truth dataset
+- Fails if pass rate drops below 50%
+- Tracks score trends via GitHub Actions artifacts
 ## LLM Evaluation
 
 Measures explanation quality against a ground truth dataset using three metrics:
