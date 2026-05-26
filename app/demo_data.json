@@ -1,0 +1,220 @@
+{
+  "findings": [
+    {
+      "file": "env",
+      "type": "Secret",
+      "id": "huggingface-token",
+      "severity": "SECRET",
+      "source": "gitleaks",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": null
+    },
+    {
+      "file": "vulnerable_code.py",
+      "type": "Secret",
+      "id": "generic-api-token",
+      "severity": "SECRET",
+      "source": "gitleaks",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": null
+    },
+    {
+      "file": "test_secret.py",
+      "type": "Secret",
+      "id": "generic-api-token",
+      "severity": "SECRET",
+      "source": "gitleaks",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": null
+    },
+    {
+      "file": "test_secret.py",
+      "type": "Secret",
+      "id": "test-api-key",
+      "severity": "SECRET",
+      "source": "gitleaks",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": null
+    },
+    {
+      "file": "app/main.py",
+      "type": "Vulnerability",
+      "id": "B110",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-703"
+    },
+    {
+      "file": "app/api.py",
+      "type": "Vulnerability",
+      "id": "B110",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-703"
+    },
+    {
+      "file": "app/api.py",
+      "type": "Vulnerability",
+      "id": "B104",
+      "severity": "MEDIUM",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-605"
+    },
+    {
+      "file": "vulnerable_code.py",
+      "type": "Vulnerability",
+      "id": "B404",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-78"
+    },
+    {
+      "file": "app/scanner.py",
+      "type": "Vulnerability",
+      "id": "B404",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-78"
+    },
+    {
+      "file": "app/scanner.py",
+      "type": "Vulnerability",
+      "id": "B603",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-78"
+    },
+    {
+      "file": "vulnerable_code.py",
+      "type": "Vulnerability",
+      "id": "B105",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-259"
+    },
+    {
+      "file": "test_secret.py",
+      "type": "Vulnerability",
+      "id": "B105",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-259"
+    },
+    {
+      "file": "vulnerable_code.py",
+      "type": "Vulnerability",
+      "id": "B605",
+      "severity": "HIGH",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-78"
+    },
+    {
+      "file": "vulnerable_code.py",
+      "type": "Vulnerability",
+      "id": "B607",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-78"
+    },
+    {
+      "file": "vulnerable_code.py",
+      "type": "Vulnerability",
+      "id": "B602",
+      "severity": "LOW",
+      "source": "bandit",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": "CWE-78"
+    },
+    {
+      "file": "requirements.txt",
+      "type": "Vulnerability",
+      "id": "CVE-2026-28684",
+      "severity": "MEDIUM",
+      "source": "trivy",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": null
+    },
+    {
+      "file": "requirements.txt",
+      "type": "Vulnerability",
+      "id": "CVE-2026-33682",
+      "severity": "MEDIUM",
+      "source": "trivy",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": null
+    },
+    {
+      "file": "env",
+      "type": "Vulnerability",
+      "id": "hugging-face-access-token",
+      "severity": "CRITICAL",
+      "source": "trivy",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": null
+    },
+    {
+      "file": "env",
+      "type": "Secret",
+      "id": "hugging-face-access-token",
+      "severity": "SECRET",
+      "source": "trivy",
+      "explanation": null,
+      "why_dangerous": null,
+      "fix": null,
+      "cwe": null
+    }
+  ],
+  "stats": {
+    "files": 32,
+    "vulns": 11,
+    "secrets": 4,
+    "high_critical": 2
+  },
+  "source": "static_demo"
+}
