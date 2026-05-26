@@ -1,6 +1,8 @@
 ﻿# ChromaDB vector store
 data/
 !data/demo_data.json
+!data/eval_results.db
+
 
 # Streamlit temp files
 tmp/
