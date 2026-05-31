@@ -610,15 +610,9 @@ def render_main(stats, recent_findings):
                         from agent import run_agent_for_finding
                         agent_result = run_agent_for_finding(finding_input)
                         answer=agent_result['final_answer']
-                        display=answer[:500] +("..." if len(answer) > 500 else "")
+                        display=answer[:2000] +("..." if len(answer) > 2000 else "")
                         display=html.escape(display)
-                    st.markdown(f"""
-                    <div style='background:#0d1117;border:1px solid #1e2d40;border-radius:6px;
-                                padding:12px;font-family:JetBrains Mono;font-size:10px;
-                                color:#c9d1d9;margin-top:8px;'>
-                        {display}
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.text_area("Agent Output", value=answer, height=400, label_visibility="collapsed")
         with tab2:
             st.markdown('<div class="sidebar-section">AI Explanations</div>', unsafe_allow_html=True)
             ollama_up = ollama_status()

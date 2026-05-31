@@ -16,7 +16,8 @@ import argparse
 from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
-
+from pathlib import Path
+BASE_DIR = Path(__file__).parent.parent.resolve()
 
 from tools import(
     TOOL_REGISTRY,
@@ -150,11 +151,18 @@ class Agent:
         actual_file = file_path
         if not actual_file and graph_result.status == "success":
             files = graph_result.metadata.get("affected_files", [])
-            if files:
-                actual_file = files[0]
-                if not actual_file.startswith("app/"):
-                    actual_file=f"app/{actual_file}"
-                self._log(f"Discovered file from graph: {actual_file}")
+            for f in files:
+                # Try the path as-is first
+                if (BASE_DIR / f).exists():
+                    actual_file = f
+                    self._log(f"Discovered file from graph: {actual_file}")
+                    break
+                # Try stripping leading path separators
+                stripped = f.lstrip("/\\")
+                if (BASE_DIR / stripped).exists():
+                    actual_file = stripped
+                    self._log(f"Discovered file from graph: {actual_file}")
+                    break
 
         file_result = None
         if actual_file:

@@ -117,7 +117,7 @@ GROUND_TRUTH = [
 #Embedding Model
 _model=None
 
-def get_embed_model()->SentenceTransformer:
+def get_embed_model():
     """Load sentence transformer once and cache in module scope"""
     global _model
     if _model is None:
