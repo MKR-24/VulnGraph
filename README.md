@@ -314,3 +314,12 @@ Before hybrid RAG, B404 retrieval returned unrelated crypto documents (B304 at 3
 | B105 | Unknown | B105 hardcoded password (80.0%) |
 
 Knowledge base: 120 documents — 26 CWE definitions, 10 OWASP Top 10 (2025), 84 Bandit rules
+
+## Known Security Issues
+
+| CVE | Package | Severity | Status |
+|-----|---------|----------|--------|
+| CVE-2026-45829 | chromadb 1.5.9 | CRITICAL (CVSS 10.0) | No fix available — affects all versions 1.0.0-1.5.9 |
+
+**CVE-2026-45829** is a pre-authentication RCE in ChromaDB's FastAPI server. VulnGraph uses ChromaDB locally for the RAG pipeline — it is not exposed to external network traffic in the default configuration. Do not expose the ChromaDB port (8000) to the internet.
+That's why The GitHub Actions security scan workflow actively detects this CVE on every push, demonstrating the CI pipeline is working correctly. The workflow intentionally fails until an official fix is released.
